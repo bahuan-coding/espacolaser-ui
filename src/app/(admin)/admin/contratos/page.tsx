@@ -163,18 +163,21 @@ export default async function AdminContratosPage({ searchParams }: PageProps) {
             />
           </form>
 
-          <select
-            defaultValue={params.merchant || ""}
-            onChange={(e) => {
-              window.location.href = buildUrl({ merchant: e.target.value || undefined, page: undefined });
-            }}
-            className="px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-300 focus:outline-none focus:border-violet-500"
-          >
-            <option value="">Todos os Lojistas</option>
-            {data.merchants.map((m) => (
-              <option key={m.id} value={m.id}>{m.name}</option>
+          <div className="flex gap-2">
+            {[{ id: "", name: "Todos" }, ...data.merchants].map((m) => (
+              <Link
+                key={m.id}
+                href={buildUrl({ merchant: m.id || undefined, page: undefined })}
+                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  params.merchant === m.id || (!params.merchant && m.id === "")
+                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                    : "bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700"
+                }`}
+              >
+                {m.name}
+              </Link>
             ))}
-          </select>
+          </div>
         </div>
 
         <div className="flex gap-2 mb-4 flex-wrap">
