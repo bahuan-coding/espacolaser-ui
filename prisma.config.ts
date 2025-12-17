@@ -9,6 +9,8 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL!,
+    db: {
+      url: process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL!,
+    },
   },
 });
