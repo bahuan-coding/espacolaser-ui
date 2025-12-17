@@ -8,7 +8,8 @@ function createPrismaClient() {
   const connectionString = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL;
   
   if (!connectionString) {
-    throw new Error("Database connection string not found");
+    console.error("ENV vars available:", Object.keys(process.env).filter(k => k.includes('DATABASE') || k.includes('NETLIFY')));
+    throw new Error("Database connection string not found. Set NETLIFY_DATABASE_URL or DATABASE_URL.");
   }
 
   const pool = new Pool({ connectionString });
