@@ -1,34 +1,142 @@
 "use client";
 
-import { Bell, User } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Bell, User, Menu, LogOut, Settings, ChevronDown } from "lucide-react";
+import { useMobileNav } from "./mobile-nav-context";
 
-export function MainHeader() {
+interface MainHeaderProps {
+  merchantName?: string;
+  merchantDocument?: string;
+  userName?: string;
+  userRole?: string;
+}
+
+export function MainHeader({ 
+  merchantName = "Carregando...",
+  merchantDocument = "",
+  userName = "Usuário",
+  userRole = "Lojista"
+}: MainHeaderProps) {
+  const router = useRouter();
+  const { toggle } = useMobileNav();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    router.push("/login");
+  };
+
   return (
-    <header className="h-16 bg-slate-950 border-b border-slate-800 flex items-center justify-between px-6">
-      <div>
-        <h1 className="text-lg font-semibold text-white">Loja Exemplo LTDA</h1>
-        <p className="text-xs text-slate-500">CNPJ: 00.000.000/0001-00</p>
-      </div>
-
+    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-6">
       <div className="flex items-center gap-4">
-        <button className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-emerald-500 rounded-full" />
+        {/* Mobile hamburger */}
+        <button
+          onClick={toggle}
+          className="lg:hidden p-2 -ml-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+          aria-label="Abrir menu"
+        >
+          <Menu className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-3 pl-4 border-l border-slate-800">
-          <div className="text-right">
-            <p className="text-sm font-medium text-white">João Silva</p>
-            <p className="text-xs text-slate-500">Administrador</p>
-          </div>
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
-            <User className="w-5 h-5 text-white" />
-          </div>
+        <div className="hidden sm:block">
+          <h1 className="text-lg font-semibold text-slate-900">{merchantName}</h1>
+          {merchantDocument && (
+            <p className="text-xs text-slate-500">CNPJ: {merchantDocument}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 sm:gap-4">
+        {/* Notifications */}
+        <div ref={notificationRef} className="relative">
+          <button 
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="relative p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:ring-offset-2"
+            aria-label="Notificações"
+            aria-expanded={showNotifications}
+            aria-haspopup="true"
+          >
+            <Bell className="w-5 h-5" aria-hidden="true" />
+          </button>
+          
+          {showNotifications && (
+            <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-lg border border-slate-200 py-2 z-50">
+              <div className="px-4 py-3 border-b border-slate-100">
+                <p className="font-medium text-slate-900">Notificações</p>
+              </div>
+              <div className="p-4 text-center">
+                <Bell className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">Nenhuma notificação</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* User menu */}
+        <div ref={userMenuRef} className="relative">
+          <button
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="flex items-center gap-2 sm:gap-3 p-2 rounded-lg hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:ring-offset-2"
+            aria-label="Menu do usuário"
+            aria-expanded={showUserMenu}
+            aria-haspopup="true"
+          >
+            <div className="hidden sm:block text-right">
+              <p className="text-sm font-medium text-slate-900">{userName}</p>
+              <p className="text-xs text-slate-500">{userRole}</p>
+            </div>
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+              <User className="w-4 h-4 text-white" />
+            </div>
+            <ChevronDown className="w-4 h-4 text-slate-400 hidden sm:block" />
+          </button>
+
+          {showUserMenu && (
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 py-2 z-50">
+              <div className="px-4 py-2 border-b border-slate-100 sm:hidden">
+                <p className="font-medium text-slate-900">{userName}</p>
+                <p className="text-xs text-slate-500">{userRole}</p>
+              </div>
+              <button
+                onClick={() => { router.push("/configuracoes"); setShowUserMenu(false); }}
+                className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3"
+              >
+                <Settings className="w-4 h-4" />
+                Configurações
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3"
+              >
+                <LogOut className="w-4 h-4" />
+                Sair
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
   );
 }
+
+
 
 
 

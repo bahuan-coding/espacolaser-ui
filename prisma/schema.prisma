@@ -89,6 +89,48 @@ enum PlCardIssuanceStatus {
   blocked
 }
 
+// Payment event types for manual/file payments
+enum PaymentEventType {
+  full_payment        // Pagamento completo
+  partial_payment     // Pagamento parcial
+  overpayment         // Pagamento maior que o devido
+  late_payment        // Pagamento com atraso
+  refund              // Estorno
+  chargeback          // Contestacao
+  write_off           // Baixa por prejuizo
+  manual_adjustment   // Ajuste manual
+}
+
+// Payment methods
+enum PaymentMethod {
+  boleto              // Boleto bancario
+  pix                 // PIX
+  credit_card         // Cartao de credito
+  debit_card          // Cartao de debito
+  bank_transfer       // TED/DOC
+  escrow_drawdown     // Debito do escrow
+  fallback_charge     // Cobranca no cartao tokenizado
+}
+
+// Return file processing status
+enum ReturnFileStatus {
+  uploaded
+  parsing
+  parsed
+  processing
+  processed
+  failed
+}
+
+// Payment matching status
+enum PaymentMatchStatus {
+  pending
+  auto_matched
+  manual_matched
+  unmatched
+  disputed
+}
+
 // ============================================================================
 // A. IDENTITY & ACCESS
 // ============================================================================
@@ -334,6 +376,7 @@ model ContractInstallment {
   repayments          FundRepayment[]
   quotaContributions  FundQuotaContribution[]
   chargeAttempts      TokenizedCardCharge[]
+  paymentEvents       PaymentEvent[]
 
   @@unique([contractId, installmentNumber])
   @@index([contractId])
@@ -618,3 +661,86 @@ model DomainEvent {
 // - a55.fallback_charge.failed
 // - fidc.payment.received
 // - fidc.quota.contribution
+
+// ============================================================================
+// G. PAYMENT EVENTS & RETURN FILES
+// ============================================================================
+
+// Return file from gateway/BIZ/bank
+model ReturnFile {
+  id               String           @id @default(cuid())
+  fileName         String
+  fileType         String           // gateway, biz, bank
+  fileHash         String?
+  fileSize         Int
+  fileContent      String?          @db.Text // Raw file content for reprocessing
+  uploadedBy       String?
+  status           ReturnFileStatus @default(uploaded)
+  totalRecords     Int              @default(0)
+  matchedRecords   Int              @default(0)
+  unmatchedRecords Int              @default(0)
+  errorMessage     String?
+  processedAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  payments         PaymentEvent[]
+
+  @@index([status])
+  @@index([fileType])
+  @@index([createdAt])
+  @@map("return_files")
+}
+
+// Individual payment event (from file or manual entry)
+model PaymentEvent {
+  id                  String             @id @default(cuid())
+  installmentId       String?
+  returnFileId        String?
+
+  // Payment identification
+  externalReference   String?            // Gateway/bank transaction ID
+  customerDocument    String?            // CPF/CNPJ of payer
+  customerName        String?            // Payer name
+  barcode             String?            // Boleto barcode
+  pixKey              String?            // PIX key used
+
+  // Amounts
+  expectedAmountCents BigInt
+  paidAmountCents     BigInt
+  feesCents           BigInt             @default(0)
+  netAmountCents      BigInt
+
+  // Type and method
+  eventType           PaymentEventType
+  paymentMethod       PaymentMethod
+
+  // Matching info
+  matchStatus         PaymentMatchStatus @default(pending)
+  matchedBy           String?            // "auto" or admin user id
+  matchedAt           DateTime?
+  matchConfidence     Float?             // 0-1 for auto-match confidence
+
+  // Dates
+  paymentDate         DateTime
+  settlementDate      DateTime?
+  processedAt         DateTime?
+
+  // Notes
+  observations        String?
+  createdBy           String?            // Admin user who created
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  installment         ContractInstallment? @relation(fields: [installmentId], references: [id])
+  returnFile          ReturnFile?          @relation(fields: [returnFileId], references: [id])
+
+  @@index([installmentId])
+  @@index([returnFileId])
+  @@index([matchStatus])
+  @@index([externalReference])
+  @@index([customerDocument])
+  @@index([barcode])
+  @@index([paymentDate])
+  @@map("payment_events")
+}

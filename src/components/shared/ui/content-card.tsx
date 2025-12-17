@@ -11,9 +11,9 @@ export function ContentCard({ title, description, actions, children }: ContentCa
   const hasHeader = title || description || actions;
 
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
       {hasHeader && (
-        <div className="flex items-start justify-between p-6 border-b border-slate-800">
+        <div className="flex items-start justify-between p-6 border-b border-slate-100">
           <div>
             {title && <h3 className={typography.sectionTitle}>{title}</h3>}
             {description && <p className={typography.sectionSubtitle}>{description}</p>}

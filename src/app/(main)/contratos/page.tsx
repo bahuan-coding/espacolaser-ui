@@ -1,5 +1,7 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { PageContainer } from "@/components/shared/layout/page-container";
 import { PageHeader } from "@/components/shared/layout/page-header";
 import { Section } from "@/components/shared/layout/section";
@@ -88,8 +90,8 @@ export default async function ContratosPage({ searchParams }: PageProps) {
       <PageContainer>
         <PageHeader title="Contratos" subtitle="Gestão de contratos e parcelas" />
         <Section>
-          <div className="p-6 bg-slate-900/50 border border-slate-800 rounded-2xl">
-            <p className="text-slate-400">Nenhum merchant encontrado.</p>
+          <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <p className="text-slate-500">Nenhum merchant encontrado.</p>
           </div>
         </Section>
       </PageContainer>
@@ -103,10 +105,19 @@ export default async function ContratosPage({ searchParams }: PageProps) {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Contratos"
-        subtitle="Gestão de contratos e parcelas do Private Label"
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Contratos</h1>
+          <p className="text-slate-500 mt-1">Gestão de contratos e parcelas do Private Label</p>
+        </div>
+        <Link
+          href="/contratos/novo"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-medium rounded-xl hover:from-emerald-600 hover:to-cyan-600 transition-all shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          Novo Contrato
+        </Link>
+      </div>
 
       <Section>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

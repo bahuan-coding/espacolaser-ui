@@ -80,8 +80,8 @@ export default async function BoletosPage({ searchParams }: PageProps) {
       <PageContainer>
         <PageHeader title="Boletos / Faturas" subtitle="Acompanhamento de cobranças" />
         <Section>
-          <div className="p-6 bg-slate-900/50 border border-slate-800 rounded-2xl">
-            <p className="text-slate-400">Nenhum merchant encontrado.</p>
+          <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <p className="text-slate-500">Nenhum merchant encontrado.</p>
           </div>
         </Section>
       </PageContainer>
@@ -99,7 +99,7 @@ export default async function BoletosPage({ searchParams }: PageProps) {
       header: "Cliente",
       render: (i: (typeof data.installments)[0]) => (
         <div>
-          <p className="text-white font-medium">{i.contract.endCustomer.name}</p>
+          <p className="text-slate-900 font-medium">{i.contract.endCustomer.name}</p>
           <p className="text-xs text-slate-500">{i.contract.endCustomer.document}</p>
         </div>
       ),
@@ -107,10 +107,11 @@ export default async function BoletosPage({ searchParams }: PageProps) {
     {
       key: "contract",
       header: "Contrato",
+      hideOnMobile: true,
       render: (i: (typeof data.installments)[0]) => (
         <Link
           href={`/contratos/${i.contract.id}`}
-          className="text-violet-400 hover:text-violet-300 text-sm"
+          className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
         >
           {i.contract.contractNumber}
         </Link>
@@ -120,8 +121,9 @@ export default async function BoletosPage({ searchParams }: PageProps) {
       key: "installment",
       header: "Parcela",
       className: "text-center",
+      hideOnMobile: true,
       render: (i: (typeof data.installments)[0]) => (
-        <span className="text-slate-300">
+        <span className="text-slate-600">
           {i.installmentNumber}/{i.contract.numberOfInstallments}
         </span>
       ),
@@ -131,17 +133,18 @@ export default async function BoletosPage({ searchParams }: PageProps) {
       header: "Valor",
       className: "text-right",
       render: (i: (typeof data.installments)[0]) => (
-        <span className="text-white font-medium">{formatCurrency(i.amountCents)}</span>
+        <span className="text-slate-900 font-medium">{formatCurrency(i.amountCents)}</span>
       ),
     },
     {
       key: "dueDate",
       header: "Vencimento",
+      hideOnMobile: true,
       render: (i: (typeof data.installments)[0]) => (
         <div>
-          <p className="text-slate-300">{formatDate(i.dueDate)}</p>
+          <p className="text-slate-700">{formatDate(i.dueDate)}</p>
           {i.daysOverdue > 0 && (
-            <p className="text-xs text-red-400">{i.daysOverdue} dias de atraso</p>
+            <p className="text-xs text-red-600">{i.daysOverdue} dias de atraso</p>
           )}
         </div>
       ),
@@ -149,8 +152,9 @@ export default async function BoletosPage({ searchParams }: PageProps) {
     {
       key: "paidAt",
       header: "Pagamento",
+      hideOnMobile: true,
       render: (i: (typeof data.installments)[0]) => (
-        <span className="text-slate-400">
+        <span className="text-slate-500">
           {i.paidAt ? formatDate(i.paidAt) : "-"}
         </span>
       ),
@@ -206,15 +210,15 @@ export default async function BoletosPage({ searchParams }: PageProps) {
       </Section>
 
       <Section>
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4">
           {statusFilters.map((filter) => (
             <Link
               key={filter.value}
               href={`/boletos${filter.value ? `?status=${filter.value}` : ""}`}
-              className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                 params.status === filter.value || (!params.status && filter.value === "")
-                  ? "bg-violet-500/20 text-violet-400 border border-violet-500/30"
-                  : "bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300"
               }`}
             >
               {filter.label}
@@ -230,7 +234,7 @@ export default async function BoletosPage({ searchParams }: PageProps) {
         />
 
         {data.pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
             <p className="text-sm text-slate-500">
               Página {data.pagination.page} de {data.pagination.totalPages}
             </p>
@@ -238,7 +242,7 @@ export default async function BoletosPage({ searchParams }: PageProps) {
               {data.pagination.page > 1 && (
                 <Link
                   href={`/boletos?${params.status ? `status=${params.status}&` : ""}page=${data.pagination.page - 1}`}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2 text-sm rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors font-medium"
                 >
                   Anterior
                 </Link>
@@ -246,7 +250,7 @@ export default async function BoletosPage({ searchParams }: PageProps) {
               {data.pagination.page < data.pagination.totalPages && (
                 <Link
                   href={`/boletos?${params.status ? `status=${params.status}&` : ""}page=${data.pagination.page + 1}`}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2 text-sm rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors font-medium"
                 >
                   Próxima
                 </Link>

@@ -43,7 +43,7 @@ export function ContratosTable({ contracts, pagination }: ContratosTableProps) {
       header: "Contrato",
       render: (c: ContractWithRelations) => (
         <div>
-          <p className="text-white font-medium">{c.contractNumber}</p>
+          <p className="text-slate-900 font-medium">{c.contractNumber}</p>
           <p className="text-xs text-slate-500">{formatDate(c.startDate)}</p>
         </div>
       ),
@@ -51,9 +51,10 @@ export function ContratosTable({ contracts, pagination }: ContratosTableProps) {
     {
       key: "customer",
       header: "Cliente",
+      hideOnMobile: true,
       render: (c: ContractWithRelations) => (
         <div>
-          <p className="text-slate-300">{c.endCustomer.name}</p>
+          <p className="text-slate-700">{c.endCustomer.name}</p>
           <p className="text-xs text-slate-500">{c.endCustomer.document}</p>
         </div>
       ),
@@ -63,7 +64,7 @@ export function ContratosTable({ contracts, pagination }: ContratosTableProps) {
       header: "Valor Total",
       className: "text-right",
       render: (c: ContractWithRelations) => (
-        <span className="text-slate-300 font-medium">
+        <span className="text-slate-900 font-medium">
           {formatCurrency(c.totalAmountCents)}
         </span>
       ),
@@ -71,13 +72,14 @@ export function ContratosTable({ contracts, pagination }: ContratosTableProps) {
     {
       key: "installments",
       header: "Parcelas",
+      hideOnMobile: true,
       render: (c: ContractWithRelations) => (
         <div className="flex items-center gap-2">
-          <span className="text-slate-300">
+          <span className="text-slate-600">
             {c.paidCount}/{c.totalInstallments}
           </span>
           {c.lateCount > 0 && (
-            <span className="text-xs text-red-400">({c.lateCount} atraso)</span>
+            <span className="text-xs text-red-600 font-medium">({c.lateCount} atraso)</span>
           )}
         </div>
       ),

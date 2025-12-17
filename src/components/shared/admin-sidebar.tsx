@@ -16,6 +16,9 @@ import {
   FileStack,
   CalendarDays,
   BookOpen,
+  FileUp,
+  Receipt,
+  CheckCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +26,9 @@ const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/contratos", label: "Contratos", icon: FileStack },
   { href: "/admin/parcelas", label: "Parcelas", icon: CalendarDays },
+  { href: "/admin/arquivos", label: "Arquivos Retorno", icon: FileUp },
+  { href: "/admin/pagamentos", label: "Pagamentos", icon: Receipt },
+  { href: "/admin/baixas", label: "Baixa Manual", icon: CheckCircle },
   { href: "/admin/fundos", label: "Fundos FIDC", icon: Building2 },
   { href: "/admin/escrow", label: "Contas Escrow", icon: Wallet },
   { href: "/admin/ledger", label: "Ledger Escrow", icon: BookOpen },

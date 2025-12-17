@@ -161,3 +161,4 @@ pnpm db:seed
 - **Prisma docs**: https://www.prisma.io/docs
 - **Supabase docs**: https://supabase.com/docs
 
+

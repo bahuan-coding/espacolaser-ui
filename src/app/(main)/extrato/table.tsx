@@ -31,7 +31,7 @@ export function ExtratoTable({ entries, pagination }: ExtratoTableProps) {
       key: "createdAt",
       header: "Data/Hora",
       render: (entry: EscrowLedgerEntry) => (
-        <span className="text-slate-300">{formatDateTime(entry.createdAt)}</span>
+        <span className="text-slate-700">{formatDateTime(entry.createdAt)}</span>
       ),
     },
     {
@@ -47,7 +47,7 @@ export function ExtratoTable({ entries, pagination }: ExtratoTableProps) {
       className: "text-right",
       render: (entry: EscrowLedgerEntry) => (
         <span className={`font-medium ${
-          entry.entryType === "credit" ? "text-emerald-400" : "text-red-400"
+          entry.entryType === "credit" ? "text-emerald-600" : "text-red-600"
         }`}>
           {entry.entryType === "credit" ? "+" : "-"}
           {formatCurrency(entry.amountCents)}
@@ -58,15 +58,17 @@ export function ExtratoTable({ entries, pagination }: ExtratoTableProps) {
       key: "balanceAfterCents",
       header: "Saldo Após",
       className: "text-right",
+      hideOnMobile: true,
       render: (entry: EscrowLedgerEntry) => (
-        <span className="text-slate-300">{formatCurrency(entry.balanceAfterCents)}</span>
+        <span className="text-slate-700 font-medium">{formatCurrency(entry.balanceAfterCents)}</span>
       ),
     },
     {
       key: "description",
       header: "Descrição",
+      hideOnMobile: true,
       render: (entry: EscrowLedgerEntry) => (
-        <span className="text-slate-400">
+        <span className="text-slate-600">
           {entry.description || entry.referenceType || "-"}
         </span>
       ),
@@ -74,6 +76,7 @@ export function ExtratoTable({ entries, pagination }: ExtratoTableProps) {
     {
       key: "referenceId",
       header: "Referência",
+      hideOnMobile: true,
       render: (entry: EscrowLedgerEntry) => (
         <span className="text-xs text-slate-500 font-mono">
           {entry.referenceId ? entry.referenceId.slice(0, 12) + "..." : "-"}

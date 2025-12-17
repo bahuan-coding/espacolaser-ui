@@ -1,4 +1,20 @@
-import { PrismaClient, InstallmentStatus, InstallmentOrigin, DisbursementStatus, ReconciliationStatus, LedgerEntryType, DrawdownReason, ContractEligibilityStatus, TokenizationStatus, CardChargeStatus, PlCardIssuanceStatus } from '../src/generated/prisma'
+import { 
+  PrismaClient, 
+  InstallmentStatus, 
+  InstallmentOrigin, 
+  DisbursementStatus, 
+  ReconciliationStatus, 
+  LedgerEntryType, 
+  DrawdownReason, 
+  ContractEligibilityStatus, 
+  TokenizationStatus, 
+  CardChargeStatus, 
+  PlCardIssuanceStatus,
+  PaymentEventType,
+  PaymentMethod,
+  ReturnFileStatus,
+  PaymentMatchStatus
+} from '../src/generated/prisma'
 import { PrismaNeon } from '@prisma/adapter-neon'
 import dotenv from 'dotenv'
 
@@ -39,45 +55,59 @@ const generateCNPJ = () => {
 }
 
 const generateToken = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 12)}`
+const generateBarcode = () => `23793.${randomInt(10000, 99999)} ${randomInt(10000, 99999)}.${randomInt(100000, 999999)} ${randomInt(10000, 99999)}.${randomInt(100000, 999999)} ${randomInt(1, 9)} ${randomInt(10000000, 99999999)}`
+const generatePixKey = () => `${Math.random().toString(36).substring(2, 34)}`
+
 const addDays = (date: Date, days: number) => new Date(date.getTime() + days * 24 * 60 * 60 * 1000)
 const addMonths = (date: Date, months: number) => {
   const d = new Date(date)
   d.setMonth(d.getMonth() + months)
   return d
 }
+const formatDate = (date: Date) => date.toISOString().slice(0, 10).replace(/-/g, '')
 
 // Test case types
 type TestCase = 'happy_path' | 'late_60d' | 'defaulted' | 'escrow_drawdown' | 'tokenization_failed'
 
-const merchantNames = ['Espaço Laser Centro', 'Espaço Laser Shopping', 'Espaço Laser Premium']
-
-// Realistic service packages
-const servicePackages = [
-  'Depilação Corpo Inteiro',
-  'Depilação Áreas Pequenas',
-  'Depilação Virilha + Axilas',
-  'Pacote Facial Completo',
-  'Tratamento Rejuvenescimento',
-  'Harmonização Facial',
-  'Pacote Pernas + Coxas',
-  'Depilação Masculina Costas',
-  'Tratamento Anti-Idade',
-  'Pacote Noivas Premium',
+// Realistic merchant names with locations
+const merchantNames = [
+  'Espaço Laser - Shopping Ibirapuera',
+  'Espaço Laser - Shopping Morumbi', 
+  'Espaço Laser - Shopping Eldorado'
 ]
+
+// Realistic service packages with prices
+const servicePackages = [
+  { name: 'Depilação Corpo Inteiro Feminino', minValue: 350000, maxValue: 480000 },
+  { name: 'Depilação Corpo Inteiro Masculino', minValue: 420000, maxValue: 550000 },
+  { name: 'Pacote Virilha Completa + Axilas', minValue: 150000, maxValue: 220000 },
+  { name: 'Depilação Pernas Completas', minValue: 180000, maxValue: 280000 },
+  { name: 'Pacote Facial Premium', minValue: 120000, maxValue: 180000 },
+  { name: 'Tratamento Rejuvenescimento Facial', minValue: 280000, maxValue: 400000 },
+  { name: 'Harmonização Facial Completa', minValue: 450000, maxValue: 650000 },
+  { name: 'Pacote Noiva Premium', minValue: 550000, maxValue: 800000 },
+  { name: 'Depilação Masculina Costas + Peito', minValue: 200000, maxValue: 320000 },
+  { name: 'Pacote Áreas Pequenas 5 Sessões', minValue: 80000, maxValue: 120000 },
+]
+
 const customerNames = [
-  'Ana Silva', 'Bruno Costa', 'Carla Oliveira', 'Daniel Santos', 'Elena Ferreira',
-  'Fernando Lima', 'Gabriela Souza', 'Hugo Pereira', 'Isabela Almeida', 'João Rodrigues',
-  'Karina Martins', 'Lucas Barbosa', 'Mariana Gomes', 'Nicolas Ribeiro', 'Olivia Carvalho',
-  'Pedro Nascimento', 'Quintina Araújo', 'Rafael Mendes', 'Sofia Castro', 'Thiago Rocha',
-  'Ursula Monteiro', 'Victor Cardoso', 'Wendy Teixeira', 'Xavier Correia', 'Yasmin Dias',
-  'Zeca Moreira', 'Amanda Lopes', 'Bernardo Freitas', 'Cecilia Nunes', 'Diego Pinto'
+  'Ana Carolina Silva', 'Bruno Henrique Costa', 'Carla Fernanda Oliveira', 'Daniel Augusto Santos', 
+  'Elena Cristina Ferreira', 'Fernando José Lima', 'Gabriela Maria Souza', 'Hugo Leonardo Pereira', 
+  'Isabela Regina Almeida', 'João Paulo Rodrigues', 'Karina Beatriz Martins', 'Lucas Eduardo Barbosa', 
+  'Mariana Luiza Gomes', 'Nicolas Gabriel Ribeiro', 'Olivia Helena Carvalho', 'Pedro Henrique Nascimento', 
+  'Rafaela Cristina Araújo', 'Rafael Augusto Mendes', 'Sofia Valentina Castro', 'Thiago Roberto Rocha',
+  'Ursula Fernanda Monteiro', 'Victor Hugo Cardoso', 'Vitória Maria Teixeira', 'William Eduardo Correia', 
+  'Yasmin Carolina Dias', 'Zélia Maria Moreira', 'Amanda Beatriz Lopes', 'Bernardo Felipe Freitas', 
+  'Cecilia Valentina Nunes', 'Diego Fernando Pinto'
 ]
 
 async function main() {
-  console.log('🌱 Starting comprehensive seed...')
+  console.log('🌱 Starting comprehensive demo seed...')
 
   // Clean existing data in correct order
   await prisma.$transaction([
+    prisma.paymentEvent.deleteMany(),
+    prisma.returnFile.deleteMany(),
     prisma.domainEvent.deleteMany(),
     prisma.auditLog.deleteMany(),
     prisma.tokenizedCardCharge.deleteMany(),
@@ -105,15 +135,15 @@ async function main() {
   const today = new Date()
 
   // ============================================================================
-  // 1. CREATE FUNDS
+  // 1. CREATE FUNDS (FIDCs)
   // ============================================================================
-  console.log('Creating funds...')
+  console.log('Creating FIDCs...')
   
   const funds = await Promise.all([
     prisma.fund.create({
       data: {
         name: 'FIDC Espaço Laser I',
-        document: generateCNPJ(),
+        document: '45.678.901/0001-23',
         adminName: 'Omni Banco S.A.',
         managerName: 'A55 Capital',
         bankCode: '341',
@@ -125,7 +155,7 @@ async function main() {
     prisma.fund.create({
       data: {
         name: 'FIDC Espaço Laser II',
-        document: generateCNPJ(),
+        document: '56.789.012/0001-34',
         adminName: 'BTG Pactual',
         managerName: 'A55 Capital',
         bankCode: '208',
@@ -136,12 +166,18 @@ async function main() {
     })
   ])
   const primaryFund = funds[0]
-  console.log(`✓ Created ${funds.length} funds`)
+  console.log(`✓ Created ${funds.length} FIDCs`)
 
   // ============================================================================
-  // 2. CREATE MERCHANTS WITH USERS
+  // 2. CREATE MERCHANTS (Lojistas) WITH USERS
   // ============================================================================
   console.log('Creating merchants...')
+
+  const merchantAddresses = [
+    { address: 'Av. Ibirapuera, 3103', city: 'São Paulo', state: 'SP', zipCode: '04029-902' },
+    { address: 'Av. Roque Petroni Júnior, 1089', city: 'São Paulo', state: 'SP', zipCode: '04707-900' },
+    { address: 'Av. Rebouças, 3970', city: 'São Paulo', state: 'SP', zipCode: '05402-918' }
+  ]
 
   const merchants = await Promise.all(
     merchantNames.map((name, i) =>
@@ -149,16 +185,14 @@ async function main() {
         data: {
           name,
           document: generateCNPJ(),
-          email: `contato@espacolaser${i + 1}.com.br`,
-          phone: `(11) 9${randomInt(1000, 9999)}-${randomInt(1000, 9999)}`,
-          address: `Rua das Flores, ${randomInt(100, 999)}`,
-          city: 'São Paulo',
-          state: 'SP',
-          zipCode: `0${randomInt(1000, 9999)}-${randomInt(100, 999)}`,
+          email: `contato@espacolaser${['ibirapuera', 'morumbi', 'eldorado'][i]}.com.br`,
+          phone: `(11) 3${randomInt(100, 999)}-${randomInt(1000, 9999)}`,
+          ...merchantAddresses[i],
           users: {
             create: [
-              { name: `Admin ${name}`, email: `admin${i + 1}@espacolaser.com.br`, role: 'admin' },
-              { name: `Operador ${name}`, email: `operador${i + 1}@espacolaser.com.br`, role: 'operator' }
+              { name: `Gerente ${name.split(' - ')[1]}`, email: `gerente.${['ibirapuera', 'morumbi', 'eldorado'][i]}@espacolaser.com.br`, role: 'admin' },
+              { name: `Atendente ${name.split(' - ')[1]}`, email: `atendente.${['ibirapuera', 'morumbi', 'eldorado'][i]}@espacolaser.com.br`, role: 'operator' },
+              { name: `Financeiro ${name.split(' - ')[1]}`, email: `financeiro.${['ibirapuera', 'morumbi', 'eldorado'][i]}@espacolaser.com.br`, role: 'viewer' }
             ]
           }
         }
@@ -182,7 +216,7 @@ async function main() {
   console.log(`✓ Created ${escrowAccounts.length} escrow accounts`)
 
   // ============================================================================
-  // 4. CREATE END CUSTOMERS
+  // 4. CREATE END CUSTOMERS (Clientes Finais)
   // ============================================================================
   console.log('Creating end customers...')
 
@@ -192,7 +226,7 @@ async function main() {
         data: {
           name,
           document: generateCPF(),
-          email: `${name.toLowerCase().replace(' ', '.')}@email.com`,
+          email: `${name.toLowerCase().split(' ').slice(0, 2).join('.')}@gmail.com`,
           phone: `(11) 9${randomInt(1000, 9999)}-${randomInt(1000, 9999)}`,
           birthDate: new Date(randomInt(1970, 2000), randomInt(0, 11), randomInt(1, 28)),
         }
@@ -202,12 +236,52 @@ async function main() {
   console.log(`✓ Created ${endCustomers.length} end customers`)
 
   // ============================================================================
-  // 5. CREATE CONTRACTS WITH FULL FLOW (5 TEST CASES)
+  // 5. CREATE GATEWAY SETTLEMENTS (for grouping transactions)
+  // ============================================================================
+  console.log('Creating gateway settlements...')
+  
+  const settlementDates = [
+    addDays(today, -7),
+    addDays(today, -14),
+    addDays(today, -21),
+    addDays(today, -28),
+    addDays(today, -35),
+  ]
+  
+  const settlements = await Promise.all(
+    settlementDates.map((date, i) =>
+      prisma.gatewaySettlement.create({
+        data: {
+          settlementDate: date,
+          totalAmountCents: BigInt(0), // Will be updated later
+          transactionCount: 0, // Will be updated later
+          status: 'processed',
+          processedAt: addDays(date, 1),
+        }
+      })
+    )
+  )
+  console.log(`✓ Created ${settlements.length} gateway settlements`)
+
+  // ============================================================================
+  // 6. CREATE CONTRACTS WITH FULL FLOW (5 TEST CASES)
   // ============================================================================
   console.log('Creating contracts with all test case scenarios...')
 
   const escrowBalances: Map<string, bigint> = new Map()
   escrowAccounts.forEach(ea => escrowBalances.set(ea.id, BigInt(0)))
+
+  // Track settlements for updating
+  const settlementTotals: Map<string, { amount: bigint, count: number }> = new Map()
+  settlements.forEach(s => settlementTotals.set(s.id, { amount: BigInt(0), count: 0 }))
+
+  // Collect all paid installments for payment events
+  const paidInstallmentsForEvents: Array<{
+    installment: any,
+    contract: any,
+    customer: any,
+    testCase: TestCase
+  }> = []
 
   let contractCount = 0
   let happyPathCount = 0
@@ -232,12 +306,16 @@ async function main() {
     for (let c = 0; c < 20; c++) {
       contractCount++
       const customer = endCustomers[(m * 20 + c) % endCustomers.length]
-      const numInstallments = randomInt(6, 12)
-      const installmentValue = randomInt(15000, 50000) // R$ 150 - R$ 500
-      const totalValue = installmentValue * numInstallments
-      const startDate = addDays(today, -randomInt(90, 180))
-      
       const testCase = testCaseDistribution[contractCount - 1] || 'happy_path'
+      
+      const servicePackage = randomElement(servicePackages)
+      const numInstallments = randomInt(6, 12)
+      const totalValue = randomInt(servicePackage.minValue, servicePackage.maxValue)
+      const installmentValue = Math.floor(totalValue / numInstallments)
+      
+      // Escrow drawdown cases need older contracts so later installments are past due
+      const daysAgo = testCase === 'escrow_drawdown' ? randomInt(240, 300) : randomInt(60, 120)
+      const startDate = addDays(today, -daysAgo)
 
       // Track counts
       if (testCase === 'happy_path') happyPathCount++
@@ -260,13 +338,11 @@ async function main() {
           expirationYear: randomInt(2026, 2030),
           tokenizationStatus: tokenizationFailed ? TokenizationStatus.failed : TokenizationStatus.success,
           tokenizedAt: tokenizationFailed ? null : addDays(startDate, 1),
-          failureReason: tokenizationFailed ? 'Card declined by issuer' : null,
+          failureReason: tokenizationFailed ? 'Cartão recusado pelo emissor' : null,
         }
       })
 
-      // ========================================
-      // Create domain event for tokenization
-      // ========================================
+      // Domain event for tokenization
       await prisma.domainEvent.create({
         data: {
           eventType: tokenizationFailed ? 'gateway.card.tokenization_failed' : 'gateway.card.tokenized',
@@ -309,7 +385,7 @@ async function main() {
           merchantId: merchant.id,
           endCustomerId: customer.id,
           contractNumber: `CTR-${String(contractCount).padStart(6, '0')}`,
-          description: `${randomElement(servicePackages)} - ${numInstallments}x`,
+          description: `${servicePackage.name} - ${numInstallments}x de R$ ${(installmentValue / 100).toFixed(2)}`,
           totalAmountCents: BigInt(totalValue),
           numberOfInstallments: numInstallments,
           startDate,
@@ -335,10 +411,10 @@ async function main() {
           lastFourDigits: String(randomInt(1000, 9999)),
           expirationMonth: randomInt(1, 12),
           expirationYear: randomInt(2026, 2030),
-          creditLimitCents: BigInt(totalValue - installmentValue), // Total - 1st installment
+          creditLimitCents: BigInt(totalValue - installmentValue),
           issuanceStatus: plCardFailed ? PlCardIssuanceStatus.failed : PlCardIssuanceStatus.issued,
           issuedAt: plCardFailed ? null : addDays(startDate, 2),
-          failureReason: plCardFailed ? 'Tokenization failed, cannot issue PL card' : null,
+          failureReason: plCardFailed ? 'Falha na tokenização, cartão PL não emitido' : null,
         }
       })
 
@@ -375,7 +451,7 @@ async function main() {
           status = InstallmentStatus.paid
           paidAt = firstInstallmentPaidAt
           paidAmountCents = BigInt(installmentValue)
-          contributesToSubQuota = true // 1st goes to Sub quota
+          contributesToSubQuota = true
         }
         // Second installment (1st PL invoice) - depends on test case
         else if (isSecond && isPast && !tokenizationFailed) {
@@ -387,7 +463,7 @@ async function main() {
             paidAt = secondInstallmentPaidAt
             paidAmountCents = BigInt(installmentValue)
             daysOverdue = Math.floor((paidAt!.getTime() - dueDate.getTime()) / (24 * 60 * 60 * 1000))
-            contributesToSubQuota = true // Late 2nd also goes to Sub quota
+            contributesToSubQuota = true
           } else {
             status = InstallmentStatus.paid
             paidAt = secondInstallmentPaidAt
@@ -397,7 +473,6 @@ async function main() {
         // Remaining installments
         else if (isPast && !tokenizationFailed && testCase !== 'defaulted') {
           if (testCase === 'escrow_drawdown' && i > numInstallments / 2) {
-            // Simulate later installments going into default
             status = i > numInstallments * 0.7 ? InstallmentStatus.defaulted : InstallmentStatus.late
             daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (24 * 60 * 60 * 1000))
           } else if (testCase === 'happy_path' || testCase === 'late_60d' || testCase === 'escrow_drawdown') {
@@ -423,8 +498,13 @@ async function main() {
         })
         installments.push(installment)
 
+        // Collect for payment events
+        if (status === InstallmentStatus.paid && paidAt) {
+          paidInstallmentsForEvents.push({ installment, contract, customer, testCase })
+        }
+
         // Create Sub quota contribution for eligible installments
-        if (contributesToSubQuota) {
+        if (contributesToSubQuota && paidAt) {
           await prisma.fundQuotaContribution.create({
             data: {
               fundId: primaryFund.id,
@@ -432,7 +512,7 @@ async function main() {
               amountCents: BigInt(installmentValue),
               quotaType: 'sub',
               reason: isFirst ? 'first_installment' : 'late_second_installment',
-              contributedAt: paidAt!,
+              contributedAt: paidAt,
             }
           })
         }
@@ -442,10 +522,17 @@ async function main() {
       // Create gateway transaction for 1st installment
       // ========================================
       if (!tokenizationFailed && firstInstallmentPaidAt) {
+        // Find appropriate settlement
+        const settlement = settlements.find(s => 
+          s.settlementDate <= firstInstallmentPaidAt! && 
+          addDays(s.settlementDate, 7) > firstInstallmentPaidAt!
+        ) || settlements[0]
+
         await prisma.gatewayTransaction.create({
           data: {
             merchantId: merchant.id,
             contractId: contract.id,
+            settlementId: settlement.id,
             gatewayTransactionId: `GW-${contract.contractNumber}-1`,
             amountCents: BigInt(installmentValue),
             status: 'settled',
@@ -454,14 +541,21 @@ async function main() {
             processedAt: firstInstallmentPaidAt,
           }
         })
+
+        // Update settlement totals
+        const current = settlementTotals.get(settlement.id)!
+        settlementTotals.set(settlement.id, {
+          amount: current.amount + BigInt(installmentValue),
+          count: current.count + 1
+        })
       }
 
       // ========================================
-      // Create disbursement with 70/30 split (for eligible contracts)
+      // Create disbursement with 70/30 split
       // ========================================
       if (eligibilityStatus === ContractEligibilityStatus.disbursed || 
           eligibilityStatus === ContractEligibilityStatus.eligible_late) {
-        const remainingValue = totalValue - installmentValue // Exclude 1st installment
+        const remainingValue = totalValue - installmentValue
         const merchantAmount = BigInt(Math.floor(remainingValue * 0.7))
         const escrowAmount = BigInt(remainingValue) - merchantAmount
 
@@ -500,7 +594,6 @@ async function main() {
           }
         })
 
-        // Domain events
         await prisma.domainEvent.create({
           data: {
             eventType: 'a55.disbursement.posted',
@@ -514,7 +607,7 @@ async function main() {
       }
 
       // ========================================
-      // Create fund repayments (from paid installments)
+      // Create fund repayments
       // ========================================
       for (const inst of installments) {
         if (inst.status === InstallmentStatus.paid && inst.paidAt && inst.installmentNumber > 1) {
@@ -550,7 +643,7 @@ async function main() {
                   reason: inst.status === InstallmentStatus.defaulted ? DrawdownReason.default_coverage : DrawdownReason.late_payment,
                   referenceType: 'installment',
                   referenceId: inst.id,
-                  description: `Cobertura ${inst.status} - Parcela ${inst.installmentNumber}`,
+                  description: `Cobertura ${inst.status === InstallmentStatus.defaulted ? 'inadimplência' : 'atraso'} - Parcela ${inst.installmentNumber}`,
                   executedAt: addDays(inst.dueDate, inst.daysOverdue > 60 ? 61 : 31),
                 }
               })
@@ -567,7 +660,6 @@ async function main() {
                 }
               })
 
-              // Domain event
               await prisma.domainEvent.create({
                 data: {
                   eventType: 'a55.escrow.drawdown',
@@ -589,7 +681,6 @@ async function main() {
       if (testCase === 'defaulted' && !tokenizationFailed) {
         const defaultedInstallment = installments.find((i: any) => i.status === InstallmentStatus.defaulted)
         if (defaultedInstallment) {
-          // Create 3 failed charge attempts
           for (let attempt = 1; attempt <= 3; attempt++) {
             await prisma.tokenizedCardCharge.create({
               data: {
@@ -599,7 +690,7 @@ async function main() {
                 status: CardChargeStatus.failed,
                 attemptNumber: attempt,
                 gatewayReference: `CHG-${contract.contractNumber}-${attempt}`,
-                failureReason: randomElement(['Insufficient funds', 'Card expired', 'Transaction declined']),
+                failureReason: randomElement(['Saldo insuficiente', 'Cartão expirado', 'Transação recusada pelo emissor']),
                 attemptedAt: addDays(defaultedInstallment.dueDate, 5 + (attempt * 7)),
                 processedAt: addDays(defaultedInstallment.dueDate, 5 + (attempt * 7)),
               }
@@ -610,7 +701,7 @@ async function main() {
                 eventType: 'a55.fallback_charge.failed',
                 source: 'a55',
                 target: 'biz',
-                payload: { contractId: contract.id, attempt, reason: 'Card declined' },
+                payload: { contractId: contract.id, attempt, reason: 'Cartão recusado' },
                 status: 'delivered',
                 deliveredAt: addDays(defaultedInstallment.dueDate, 5 + (attempt * 7)),
               }
@@ -629,7 +720,18 @@ async function main() {
   console.log(`  - Tokenization failed: ${tokenizationFailedCount}`)
 
   // ============================================================================
-  // 6. UPDATE ESCROW BALANCES
+  // 7. UPDATE GATEWAY SETTLEMENTS
+  // ============================================================================
+  console.log('Updating gateway settlements...')
+  for (const [settlementId, totals] of settlementTotals) {
+    await prisma.gatewaySettlement.update({
+      where: { id: settlementId },
+      data: { totalAmountCents: totals.amount, transactionCount: totals.count }
+    })
+  }
+
+  // ============================================================================
+  // 8. UPDATE ESCROW BALANCES
   // ============================================================================
   console.log('Updating escrow account balances...')
   for (const [escrowAccountId, balance] of escrowBalances) {
@@ -640,7 +742,167 @@ async function main() {
   }
 
   // ============================================================================
-  // 7. CREATE RECONCILIATION FILE WITH 5% MISMATCH
+  // 9. CREATE RETURN FILES & PAYMENT EVENTS
+  // ============================================================================
+  console.log('Creating return files and payment events...')
+
+  // Create 3 return files (gateway, biz, bank)
+  const returnFiles = await Promise.all([
+    prisma.returnFile.create({
+      data: {
+        fileName: `GATEWAY_RET_${formatDate(addDays(today, -7))}.csv`,
+        fileType: 'gateway',
+        fileHash: `sha256:${Math.random().toString(36).substring(2, 66)}`,
+        fileSize: randomInt(10000, 50000),
+        uploadedBy: 'sistema@a55.tech',
+        status: ReturnFileStatus.processed,
+        totalRecords: 0,
+        matchedRecords: 0,
+        unmatchedRecords: 0,
+        processedAt: addDays(today, -6),
+      }
+    }),
+    prisma.returnFile.create({
+      data: {
+        fileName: `BIZ_FATURAS_${formatDate(addDays(today, -5))}.csv`,
+        fileType: 'biz',
+        fileHash: `sha256:${Math.random().toString(36).substring(2, 66)}`,
+        fileSize: randomInt(20000, 80000),
+        uploadedBy: 'integracao@biz.com.br',
+        status: ReturnFileStatus.processed,
+        totalRecords: 0,
+        matchedRecords: 0,
+        unmatchedRecords: 0,
+        processedAt: addDays(today, -4),
+      }
+    }),
+    prisma.returnFile.create({
+      data: {
+        fileName: `BANCO_BOLETOS_${formatDate(addDays(today, -3))}.ret`,
+        fileType: 'bank',
+        fileHash: `sha256:${Math.random().toString(36).substring(2, 66)}`,
+        fileSize: randomInt(5000, 20000),
+        uploadedBy: 'cnab@itau.com.br',
+        status: ReturnFileStatus.processed,
+        totalRecords: 0,
+        matchedRecords: 0,
+        unmatchedRecords: 0,
+        processedAt: addDays(today, -2),
+      }
+    })
+  ])
+
+  // Payment method distribution for demo
+  const paymentMethodDistribution: PaymentMethod[] = [
+    ...Array(40).fill(PaymentMethod.boleto),
+    ...Array(25).fill(PaymentMethod.pix),
+    ...Array(20).fill(PaymentMethod.credit_card),
+    ...Array(10).fill(PaymentMethod.debit_card),
+    ...Array(5).fill(PaymentMethod.bank_transfer),
+  ]
+
+  // Create payment events for paid installments
+  const fileRecordCounts = { gateway: 0, biz: 0, bank: 0 }
+  const fileMatchedCounts = { gateway: 0, biz: 0, bank: 0 }
+  
+  for (let idx = 0; idx < paidInstallmentsForEvents.length; idx++) {
+    const { installment, contract, customer, testCase } = paidInstallmentsForEvents[idx]
+    
+    // Determine payment method and event type
+    const paymentMethod = paymentMethodDistribution[idx % paymentMethodDistribution.length]
+    let eventType: PaymentEventType = PaymentEventType.full_payment
+    let paidAmountCents = installment.amountCents
+    
+    // Add variety to payment events
+    if (testCase === 'late_60d' && installment.installmentNumber === 2) {
+      eventType = PaymentEventType.late_payment
+    } else if (idx % 25 === 0) {
+      // Some partial payments
+      eventType = PaymentEventType.partial_payment
+      paidAmountCents = BigInt(Math.floor(Number(installment.amountCents) * 0.8))
+    } else if (idx % 30 === 0) {
+      // Some overpayments
+      eventType = PaymentEventType.overpayment
+      paidAmountCents = BigInt(Math.floor(Number(installment.amountCents) * 1.05))
+    }
+
+    // Assign to appropriate return file
+    let returnFile: typeof returnFiles[0]
+    let fileKey: 'gateway' | 'biz' | 'bank'
+    
+    if (installment.installmentNumber === 1) {
+      returnFile = returnFiles[0] // Gateway file for 1st installment
+      fileKey = 'gateway'
+    } else if (paymentMethod === PaymentMethod.boleto) {
+      returnFile = returnFiles[2] // Bank file for boletos
+      fileKey = 'bank'
+    } else {
+      returnFile = returnFiles[1] // BIZ file for PL payments
+      fileKey = 'biz'
+    }
+    
+    fileRecordCounts[fileKey]++
+
+    // Calculate fees
+    const feesCents = BigInt(Math.floor(Number(paidAmountCents) * 0.02))
+    const netAmountCents = paidAmountCents - feesCents
+
+    // Determine match status
+    const isAutoMatched = Math.random() > 0.1 // 90% auto-matched
+    const matchStatus = isAutoMatched ? PaymentMatchStatus.auto_matched : PaymentMatchStatus.manual_matched
+    if (isAutoMatched) fileMatchedCounts[fileKey]++
+
+    await prisma.paymentEvent.create({
+      data: {
+        installmentId: installment.id,
+        returnFileId: returnFile.id,
+        externalReference: `${paymentMethod.toUpperCase()}-${contract.contractNumber}-${installment.installmentNumber}`,
+        customerDocument: customer.document,
+        customerName: customer.name,
+        barcode: paymentMethod === PaymentMethod.boleto ? generateBarcode() : null,
+        pixKey: paymentMethod === PaymentMethod.pix ? generatePixKey() : null,
+        expectedAmountCents: installment.amountCents,
+        paidAmountCents: paidAmountCents,
+        feesCents: feesCents,
+        netAmountCents: netAmountCents,
+        eventType: eventType,
+        paymentMethod: paymentMethod,
+        matchStatus: matchStatus,
+        matchedBy: isAutoMatched ? 'auto' : 'admin@a55.tech',
+        matchedAt: isAutoMatched ? installment.paidAt : addDays(installment.paidAt, 1),
+        matchConfidence: isAutoMatched ? randomInt(85, 100) / 100 : null,
+        paymentDate: installment.paidAt,
+        settlementDate: addDays(installment.paidAt, paymentMethod === PaymentMethod.pix ? 0 : 2),
+        processedAt: addDays(installment.paidAt, 1),
+        observations: eventType === PaymentEventType.late_payment 
+          ? `Pagamento com ${installment.daysOverdue} dias de atraso`
+          : eventType === PaymentEventType.partial_payment
+          ? 'Pagamento parcial - aguardando complemento'
+          : null,
+      }
+    })
+  }
+
+  // Update return file stats
+  await Promise.all([
+    prisma.returnFile.update({
+      where: { id: returnFiles[0].id },
+      data: { totalRecords: fileRecordCounts.gateway, matchedRecords: fileMatchedCounts.gateway, unmatchedRecords: fileRecordCounts.gateway - fileMatchedCounts.gateway }
+    }),
+    prisma.returnFile.update({
+      where: { id: returnFiles[1].id },
+      data: { totalRecords: fileRecordCounts.biz, matchedRecords: fileMatchedCounts.biz, unmatchedRecords: fileRecordCounts.biz - fileMatchedCounts.biz }
+    }),
+    prisma.returnFile.update({
+      where: { id: returnFiles[2].id },
+      data: { totalRecords: fileRecordCounts.bank, matchedRecords: fileMatchedCounts.bank, unmatchedRecords: fileRecordCounts.bank - fileMatchedCounts.bank }
+    }),
+  ])
+
+  console.log(`✓ Created 3 return files with ${paidInstallmentsForEvents.length} payment events`)
+
+  // ============================================================================
+  // 10. CREATE RECONCILIATION FILE
   // ============================================================================
   console.log('Creating reconciliation file...')
 
@@ -650,7 +912,7 @@ async function main() {
 
   const reconFile = await prisma.reconciliationFile.create({
     data: {
-      fileName: `BIZ_RECON_${today.toISOString().slice(0, 10).replace(/-/g, '')}.csv`,
+      fileName: `BIZ_RECON_${formatDate(today)}.csv`,
       fileHash: `sha256:${Math.random().toString(36).substring(2, 66)}`,
       source: 'biz',
       periodStart: addDays(today, -30),
@@ -677,7 +939,7 @@ async function main() {
         expectedAmountCents: inst.amountCents,
         actualAmountCents: actualAmount,
         status: isMismatch ? ReconciliationStatus.mismatched : ReconciliationStatus.matched,
-        mismatchReason: isMismatch ? 'Valor divergente no arquivo Biz' : null,
+        mismatchReason: isMismatch ? 'Valor divergente no arquivo BIZ' : null,
       }
     })
     if (isMismatch) mismatchedCount++
@@ -697,15 +959,20 @@ async function main() {
   console.log(`✓ Created reconciliation with ${matchedCount} matched, ${mismatchedCount} mismatched`)
 
   // ============================================================================
-  // 8. CREATE AUDIT LOGS
+  // 11. CREATE AUDIT LOGS
   // ============================================================================
   console.log('Creating audit logs...')
 
   await prisma.auditLog.createMany({
     data: [
-      { action: 'seed', actorType: 'system', actorId: 'seed-script', entityType: 'database', entityId: 'all', payload: { message: 'Database seeded with complete PL flow' } },
+      { action: 'seed', actorType: 'system', actorId: 'seed-script', entityType: 'database', entityId: 'all', payload: { message: 'Ambiente de demo populado com fluxo PL completo' } },
       { action: 'create', actorType: 'system', actorId: 'seed-script', entityType: 'fund', entityId: primaryFund.id, payload: { name: primaryFund.name } },
+      { action: 'create', actorType: 'system', actorId: 'seed-script', entityType: 'fund', entityId: funds[1].id, payload: { name: funds[1].name } },
       ...merchants.map(m => ({ action: 'create', actorType: 'system', actorId: 'seed-script', entityType: 'merchant', entityId: m.id, payload: { name: m.name } })),
+      { action: 'process', actorType: 'system', actorId: 'file-processor', entityType: 'return_file', entityId: returnFiles[0].id, payload: { fileName: returnFiles[0].fileName, records: fileRecordCounts.gateway } },
+      { action: 'process', actorType: 'system', actorId: 'file-processor', entityType: 'return_file', entityId: returnFiles[1].id, payload: { fileName: returnFiles[1].fileName, records: fileRecordCounts.biz } },
+      { action: 'process', actorType: 'system', actorId: 'file-processor', entityType: 'return_file', entityId: returnFiles[2].id, payload: { fileName: returnFiles[2].fileName, records: fileRecordCounts.bank } },
+      { action: 'reconcile', actorType: 'system', actorId: 'reconciliation-service', entityType: 'reconciliation_file', entityId: reconFile.id, payload: { matched: matchedCount, mismatched: mismatchedCount } },
     ]
   })
 
@@ -715,34 +982,62 @@ async function main() {
   const summary = await prisma.$transaction([
     prisma.fund.count(),
     prisma.merchant.count(),
+    prisma.merchantUser.count(),
     prisma.endCustomer.count(),
     prisma.serviceContract.count(),
     prisma.contractInstallment.count(),
     prisma.tokenizedCard.count(),
     prisma.privateLabelCard.count(),
+    prisma.gatewayTransaction.count(),
+    prisma.gatewaySettlement.count(),
     prisma.fundDisbursement.count(),
     prisma.fundQuotaContribution.count(),
     prisma.escrowDrawdown.count(),
     prisma.tokenizedCardCharge.count(),
+    prisma.returnFile.count(),
+    prisma.paymentEvent.count(),
     prisma.reconciliationItem.count(),
     prisma.domainEvent.count(),
+    prisma.auditLog.count(),
   ])
 
-  console.log('\n📊 Seed Summary:')
-  console.log(`   Funds: ${summary[0]}`)
-  console.log(`   Merchants: ${summary[1]}`)
-  console.log(`   End Customers: ${summary[2]}`)
-  console.log(`   Contracts: ${summary[3]}`)
-  console.log(`   Installments: ${summary[4]}`)
-  console.log(`   Tokenized Cards: ${summary[5]}`)
-  console.log(`   PL Cards: ${summary[6]}`)
-  console.log(`   Disbursements: ${summary[7]}`)
-  console.log(`   Quota Contributions: ${summary[8]}`)
-  console.log(`   Escrow Drawdowns: ${summary[9]}`)
-  console.log(`   Fallback Charge Attempts: ${summary[10]}`)
-  console.log(`   Reconciliation Items: ${summary[11]}`)
-  console.log(`   Domain Events: ${summary[12]}`)
-  console.log('\n✅ Seed completed successfully!')
+  console.log('\n📊 Demo Environment Summary:')
+  console.log('═══════════════════════════════════════')
+  console.log('📌 AGENTES')
+  console.log(`   FIDCs: ${summary[0]}`)
+  console.log(`   Merchants (Lojistas): ${summary[1]}`)
+  console.log(`   Merchant Users: ${summary[2]}`)
+  console.log(`   End Customers (Clientes): ${summary[3]}`)
+  console.log('───────────────────────────────────────')
+  console.log('📋 CONTRATOS')
+  console.log(`   Service Contracts: ${summary[4]}`)
+  console.log(`   Contract Installments: ${summary[5]}`)
+  console.log(`   Tokenized Cards: ${summary[6]}`)
+  console.log(`   PL Cards: ${summary[7]}`)
+  console.log('───────────────────────────────────────')
+  console.log('💳 PAGAMENTOS')
+  console.log(`   Gateway Transactions: ${summary[8]}`)
+  console.log(`   Gateway Settlements: ${summary[9]}`)
+  console.log(`   Return Files: ${summary[14]}`)
+  console.log(`   Payment Events: ${summary[15]}`)
+  console.log('───────────────────────────────────────')
+  console.log('💰 FINANCEIRO')
+  console.log(`   Fund Disbursements: ${summary[10]}`)
+  console.log(`   Quota Contributions: ${summary[11]}`)
+  console.log(`   Escrow Drawdowns: ${summary[12]}`)
+  console.log(`   Fallback Charge Attempts: ${summary[13]}`)
+  console.log('───────────────────────────────────────')
+  console.log('📊 CONCILIAÇÃO')
+  console.log(`   Reconciliation Items: ${summary[16]}`)
+  console.log('───────────────────────────────────────')
+  console.log('📝 AUDITORIA')
+  console.log(`   Domain Events: ${summary[17]}`)
+  console.log(`   Audit Logs: ${summary[18]}`)
+  console.log('═══════════════════════════════════════')
+  console.log('\n✅ Demo environment ready!')
+  console.log('\n🔐 Logins disponíveis:')
+  console.log('   Lojista: gerente.ibirapuera@espacolaser.com.br')
+  console.log('   Admin FIDC: admin@a55.tech')
 }
 
 main()

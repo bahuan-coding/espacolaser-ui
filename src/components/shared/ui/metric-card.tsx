@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { cardStyles, colors } from "@/lib/design-system/tokens";
 
-type MetricVariant = "default" | "success" | "info";
+type MetricVariant = "default" | "success" | "info" | "warning" | "danger";
 
 interface MetricCardProps {
   label: string;
@@ -16,6 +16,8 @@ const variantStyles: Record<MetricVariant, string> = {
   default: colors.text.primary,
   success: colors.accent.success,
   info: colors.accent.info,
+  warning: colors.accent.warning,
+  danger: colors.accent.danger,
 };
 
 export function MetricCard({
@@ -29,16 +31,16 @@ export function MetricCard({
   return (
     <div className={cardStyles.base}>
       <div className="flex items-start justify-between">
-        <p className="text-sm text-slate-400">{label}</p>
-        {icon && <div className="text-slate-500">{icon}</div>}
+        <p className="text-sm text-slate-500 font-medium">{label}</p>
+        {icon && <div className="text-slate-400">{icon}</div>}
       </div>
-      <p className={cn("text-2xl font-bold mt-1", variantStyles[variant])}>
+      <p className={cn("text-2xl font-bold mt-2", variantStyles[variant])}>
         {value}
       </p>
       {(description || trend) && (
         <div className="mt-2 flex items-center gap-2">
           {description && <span className="text-xs text-slate-500">{description}</span>}
-          {trend && <span className="text-xs text-emerald-400">{trend}</span>}
+          {trend && <span className="text-xs text-emerald-600 font-medium">{trend}</span>}
         </div>
       )}
     </div>

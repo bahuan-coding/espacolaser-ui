@@ -3,12 +3,12 @@ import { cn } from "@/lib/utils";
 type BadgeVariant = "default" | "success" | "warning" | "danger" | "info" | "muted";
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: "bg-slate-700/50 text-slate-300 border-slate-600",
-  success: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-  warning: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-  danger: "bg-red-500/10 text-red-400 border-red-500/30",
-  info: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
-  muted: "bg-slate-800/50 text-slate-500 border-slate-700",
+  default: "bg-slate-100 text-slate-700 border-slate-200",
+  success: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  warning: "bg-amber-50 text-amber-700 border-amber-200",
+  danger: "bg-red-50 text-red-700 border-red-200",
+  info: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  muted: "bg-slate-50 text-slate-500 border-slate-200",
 };
 
 // Mappings for common status values
@@ -51,10 +51,16 @@ const statusLabels: Record<string, string> = {
   // Ledger
   credit: "Crédito",
   debit: "Débito",
-  // Disbursement
+  // Disbursement / PL Card
   pending: "Pendente",
   posted: "Efetivado",
   reversed: "Estornado",
+  issued: "Emitido",
+  failed: "Falhou",
+  blocked: "Bloqueado",
+  // Tokenization
+  success: "Sucesso",
+  expired: "Expirado",
 };
 
 interface StatusBadgeProps {
@@ -79,7 +85,15 @@ export function StatusBadge({
   } else if (type === "ledger") {
     variant = ledgerEntryVariant[status] || "default";
   } else if (type === "disbursement") {
-    variant = status === "posted" ? "success" : status === "reversed" ? "danger" : "default";
+    if (status === "posted" || status === "issued" || status === "success") {
+      variant = "success";
+    } else if (status === "reversed" || status === "failed" || status === "blocked") {
+      variant = "danger";
+    } else if (status === "expired") {
+      variant = "warning";
+    } else {
+      variant = "default";
+    }
   }
 
   const label = showLabel ? (statusLabels[status] || status) : status;

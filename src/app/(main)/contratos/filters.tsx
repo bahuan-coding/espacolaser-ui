@@ -57,22 +57,22 @@ export function ContratosFilters({ currentStatus, currentSearch }: ContratosFilt
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por número ou cliente..."
-              className="flex-1 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-slate-300 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+              className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm hover:bg-emerald-500/30 transition-colors"
+              className="px-4 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-sm font-medium hover:bg-emerald-100 transition-colors"
             >
               Buscar
             </button>
           </form>
         </div>
         <div className="flex items-center gap-2 overflow-x-auto">
-          <span className="text-sm text-slate-400 whitespace-nowrap">Status:</span>
+          <span className="text-sm text-slate-500 whitespace-nowrap font-medium">Status:</span>
           <select
             value={currentStatus || "all"}
             onChange={(e) => handleStatusChange(e.target.value)}
-            className="px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-slate-300 focus:outline-none focus:border-emerald-500/50"
+            className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
           >
             {statusOptions.map((option) => (
               <option key={option.value} value={option.value}>
