@@ -7,7 +7,7 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
-    adapter: PrismaNeon(neon(process.env.NETLIFY_DATABASE_URL!)),
+    adapter: new PrismaNeon(neon(process.env.NETLIFY_DATABASE_URL!)),
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
