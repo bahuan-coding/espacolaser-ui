@@ -8,9 +8,9 @@ export default defineConfig({
     path: "prisma/migrations",
     seed: "tsx prisma/seed.ts",
   },
-  datasource: {
+  datasources: {
     db: {
-      url: process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL!,
+      url: process.env.DATABASE_URL ?? process.env.NETLIFY_DATABASE_URL ?? '',
     },
   },
 });
