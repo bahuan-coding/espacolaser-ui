@@ -7,7 +7,7 @@ import { PaymentActions } from "./payment-actions";
 
 interface PaymentData {
   id: string;
-  paidAmountCents: bigint;
+  paidAmountCents: number;
   paymentDate: Date;
   paymentMethod: string;
   customerName: string | null;

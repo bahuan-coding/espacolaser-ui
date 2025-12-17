@@ -9,7 +9,7 @@ interface ContractData {
   id: string;
   contractNumber: string;
   description: string | null;
-  totalAmountCents: bigint;
+  totalAmountCents: number;
   startDate: Date;
   eligibilityStatus: string;
   merchant: { id: string; name: string };
@@ -17,7 +17,7 @@ interface ContractData {
   paidCount: number;
   lateCount: number;
   totalInstallments: number;
-  disbursedAmount: bigint;
+  disbursedAmount: number;
 }
 
 interface AdminContratosTableProps {
@@ -90,8 +90,8 @@ export function AdminContratosTable({ contracts, pagination, buildUrl }: AdminCo
       header: "Desembolsado",
       className: "text-right",
       render: (c: ContractData) => (
-        <span className={c.disbursedAmount > 0n ? "text-emerald-400" : "text-slate-500"}>
-          {c.disbursedAmount > 0n ? formatCurrency(c.disbursedAmount) : "-"}
+        <span className={c.disbursedAmount > 0 ? "text-emerald-400" : "text-slate-500"}>
+          {c.disbursedAmount > 0 ? formatCurrency(c.disbursedAmount) : "-"}
         </span>
       ),
     },

@@ -9,8 +9,8 @@ interface LedgerEntryData {
   id: string;
   createdAt: Date;
   entryType: string;
-  amountCents: bigint;
-  balanceAfterCents: bigint;
+  amountCents: number;
+  balanceAfterCents: number;
   description: string | null;
   referenceType: string | null;
   referenceId: string | null;

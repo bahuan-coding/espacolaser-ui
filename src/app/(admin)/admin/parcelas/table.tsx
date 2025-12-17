@@ -8,7 +8,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 interface InstallmentData {
   id: string;
   installmentNumber: number;
-  amountCents: bigint;
+  amountCents: number;
   dueDate: Date;
   paidAt: Date | null;
   daysOverdue: number;

@@ -7,7 +7,7 @@ import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 interface DrawdownData {
   id: string;
-  amountCents: bigint;
+  amountCents: number;
   reason: string;
   description: string | null;
   referenceType: string | null;
