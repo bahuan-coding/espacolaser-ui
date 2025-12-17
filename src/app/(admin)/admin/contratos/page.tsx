@@ -159,7 +159,7 @@ export default async function AdminContratosPage({ searchParams }: PageProps) {
               name="search"
               defaultValue={params.search}
               placeholder="Buscar por contrato, cliente ou CPF..."
-              className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
+              className="w-full px-4 py-2 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:border-violet-500 dark:focus:border-violet-500"
             />
           </form>
 
@@ -170,8 +170,8 @@ export default async function AdminContratosPage({ searchParams }: PageProps) {
                 href={buildUrl({ merchant: m.id || undefined, page: undefined })}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   params.merchant === m.id || (!params.merchant && m.id === "")
-                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                    : "bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700"
+                    ? "bg-cyan-500/20 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 dark:border-cyan-500/30"
+                    : "bg-white dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700"
                 }`}
               >
                 {m.name}
@@ -187,8 +187,8 @@ export default async function AdminContratosPage({ searchParams }: PageProps) {
               href={buildUrl({ status: filter.value || undefined, page: undefined })}
               className={`px-4 py-2 rounded-lg text-sm transition-colors ${
                 params.status === filter.value || (!params.status && filter.value === "")
-                  ? "bg-violet-500/20 text-violet-400 border border-violet-500/30"
-                  : "bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700"
+                  ? "bg-violet-500/20 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/30 dark:border-violet-500/30"
+                  : "bg-white dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700"
               }`}
             >
               {filter.label}

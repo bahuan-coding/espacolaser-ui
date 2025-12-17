@@ -154,8 +154,8 @@ export default async function ParcelasPage({ searchParams }: PageProps) {
                 href={buildUrl({ status: filter.value || undefined, page: undefined })}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   params.status === filter.value || (!params.status && filter.value === "")
-                    ? "bg-violet-500/20 text-violet-400 border border-violet-500/30"
-                    : "bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700"
+                    ? "bg-violet-500/20 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/30 dark:border-violet-500/30"
+                    : "bg-white dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700"
                 }`}
               >
                 {filter.label}
@@ -170,8 +170,8 @@ export default async function ParcelasPage({ searchParams }: PageProps) {
                 href={buildUrl({ origin: filter.value || undefined, page: undefined })}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   params.origin === filter.value || (!params.origin && filter.value === "")
-                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                    : "bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700"
+                    ? "bg-cyan-500/20 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 dark:border-cyan-500/30"
+                    : "bg-white dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700"
                 }`}
               >
                 {filter.label}

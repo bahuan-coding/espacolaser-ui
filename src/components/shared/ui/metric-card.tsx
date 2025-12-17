@@ -13,11 +13,11 @@ interface MetricCardProps {
 }
 
 const variantStyles: Record<MetricVariant, string> = {
-  default: colors.text.primary,
-  success: colors.accent.success,
-  info: colors.accent.info,
-  warning: colors.accent.warning,
-  danger: colors.accent.danger,
+  default: "text-slate-900 dark:text-slate-100",
+  success: "text-emerald-600 dark:text-emerald-400",
+  info: "text-cyan-600 dark:text-cyan-400",
+  warning: "text-amber-600 dark:text-amber-400",
+  danger: "text-red-600 dark:text-red-400",
 };
 
 export function MetricCard({
@@ -29,18 +29,18 @@ export function MetricCard({
   icon,
 }: MetricCardProps) {
   return (
-    <div className={cardStyles.base}>
+    <div className={cn(cardStyles.base, "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800")}>
       <div className="flex items-start justify-between">
-        <p className="text-sm text-slate-500 font-medium">{label}</p>
-        {icon && <div className="text-slate-400">{icon}</div>}
+        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{label}</p>
+        {icon && <div className="text-slate-400 dark:text-slate-500">{icon}</div>}
       </div>
       <p className={cn("text-2xl font-bold mt-2", variantStyles[variant])}>
         {value}
       </p>
       {(description || trend) && (
         <div className="mt-2 flex items-center gap-2">
-          {description && <span className="text-xs text-slate-500">{description}</span>}
-          {trend && <span className="text-xs text-emerald-600 font-medium">{trend}</span>}
+          {description && <span className="text-xs text-slate-500 dark:text-slate-400">{description}</span>}
+          {trend && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{trend}</span>}
         </div>
       )}
     </div>

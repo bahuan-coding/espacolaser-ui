@@ -33,11 +33,11 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   if (isLoading) {
     return (
-      <div className={cardStyles.base}>
+      <div className={cn(cardStyles.base, "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800")}>
         <div className="animate-pulse space-y-3">
-          <div className="h-10 bg-slate-100 rounded-lg" />
+          <div className="h-10 bg-slate-100 dark:bg-slate-800 rounded-lg" />
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-14 bg-slate-50 rounded-lg" />
+            <div key={i} className="h-14 bg-slate-50 dark:bg-slate-800/50 rounded-lg" />
           ))}
         </div>
       </div>
@@ -46,12 +46,12 @@ export function DataTable<T>({
 
   if (data.length === 0) {
     return (
-      <div className={cardStyles.base}>
+      <div className={cn(cardStyles.base, "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800")}>
         <div className="text-center py-12">
-          <FileX className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-600 font-medium">{emptyMessage}</p>
+          <FileX className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+          <p className="text-slate-600 dark:text-slate-400 font-medium">{emptyMessage}</p>
           {emptyDescription && (
-            <p className="text-sm text-slate-500 mt-1">{emptyDescription}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-500 mt-1">{emptyDescription}</p>
           )}
         </div>
       </div>
@@ -59,16 +59,16 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn(cardStyles.base, "p-0 overflow-hidden")}>
+    <div className={cn(cardStyles.base, "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0 overflow-hidden")}>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50">
+            <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
               {columns.map((col) => (
                 <th
                   key={col.key}
                   className={cn(
-                    "px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider",
+                    "px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider",
                     col.className,
                     col.hideOnMobile && "hidden md:table-cell"
                   )}
@@ -78,21 +78,21 @@ export function DataTable<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {data.map((item) => (
               <tr
                 key={keyExtractor(item)}
                 onClick={() => onRowClick?.(item)}
                 className={cn(
                   "transition-colors",
-                  onRowClick && "cursor-pointer hover:bg-slate-50"
+                  onRowClick && "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50"
                 )}
               >
                 {columns.map((col) => (
                   <td
                     key={col.key}
                     className={cn(
-                      "px-4 py-4 text-sm text-slate-700",
+                      "px-4 py-4 text-sm text-slate-700 dark:text-slate-300",
                       col.className,
                       col.hideOnMobile && "hidden md:table-cell"
                     )}
@@ -122,21 +122,21 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-slate-500 dark:text-slate-400">
         Página {page} de {totalPages}
       </p>
       <div className="flex gap-2">
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          className="px-4 py-2 text-sm rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+          className="px-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
         >
           Anterior
         </button>
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          className="px-4 py-2 text-sm rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+          className="px-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
         >
           Próxima
         </button>
