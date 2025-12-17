@@ -1,16 +1,23 @@
 import { PrismaClient } from "@/generated/prisma";
-import { neon } from "@netlify/neon";
+import { Pool } from "@neondatabase/serverless";
 import { PrismaNeon } from "@prisma/adapter-neon";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
-const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    adapter: new PrismaNeon(neon(process.env.NETLIFY_DATABASE_URL!)),
-  });
+function createPrismaClient() {
+  const connectionString = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL;
+  
+  if (!connectionString) {
+    throw new Error("DATABASE_URL or NETLIFY_DATABASE_URL must be set");
+  }
+
+  const pool = new Pool({ connectionString });
+  const adapter = new PrismaNeon(pool);
+  
+  return new PrismaClient({ adapter });
+}
+
+export const prisma = globalForPrisma.prisma || createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-
-export { prisma };
 
