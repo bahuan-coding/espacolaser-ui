@@ -48,7 +48,12 @@ export function CustomPieChart({
             color: "var(--foreground)",
           }}
         />
-        {showLegend && <Legend />}
+        {showLegend && (
+          <Legend 
+            wrapperStyle={{ color: "var(--foreground)" }}
+            formatter={(value) => <span style={{ color: "var(--foreground)" }}>{value}</span>}
+          />
+        )}
       </PieChart>
     </ResponsiveContainer>
   );

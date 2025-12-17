@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, User, Menu, LogOut, Settings, ChevronDown } from "lucide-react";
+import { Bell, User, Menu, LogOut, Settings, ChevronDown, Sun, Moon } from "lucide-react";
 import { useMobileNav } from "./mobile-nav-context";
+import { useTheme } from "@/hooks/use-theme";
 
 interface MainHeaderProps {
   merchantName?: string;
@@ -20,6 +21,7 @@ export function MainHeader({
 }: MainHeaderProps) {
   const router = useRouter();
   const { toggle } = useMobileNav();
+  const { theme, toggleTheme } = useTheme();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -64,6 +66,15 @@ export function MainHeader({
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          aria-label="Alternar tema"
+        >
+          {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </button>
+
         {/* Notifications */}
         <div ref={notificationRef} className="relative">
           <button 

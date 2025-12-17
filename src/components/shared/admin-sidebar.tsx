@@ -27,22 +27,22 @@ import { cn } from "@/lib/utils";
 import { useMobileNav } from "./mobile-nav-context";
 
 const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/contratos", label: "Contratos", icon: FileStack },
-  { href: "/admin/parcelas", label: "Parcelas", icon: CalendarDays },
-  { href: "/admin/arquivos", label: "Arquivos Retorno", icon: FileUp },
-  { href: "/admin/pagamentos", label: "Pagamentos", icon: Receipt },
-  { href: "/admin/baixas", label: "Baixa Manual", icon: CheckCircle },
-  { href: "/admin/fundos", label: "Fundos FIDC", icon: Building2 },
-  { href: "/admin/escrow", label: "Contas Escrow", icon: Wallet },
-  { href: "/admin/ledger", label: "Ledger Escrow", icon: BookOpen },
-  { href: "/admin/conciliacao", label: "Conciliação", icon: FileCheck },
-  { href: "/admin/drawdowns", label: "Drawdowns", icon: AlertTriangle },
-  { href: "/admin/merchants", label: "Lojistas", icon: Users },
-  { href: "/admin/clientes", label: "Clientes Finais", icon: UserCheck },
-  { href: "/admin/transacoes", label: "Transações", icon: CreditCard },
-  { href: "/admin/simulador", label: "Simulador", icon: Play },
-  { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, description: "Visão geral do sistema" },
+  { href: "/admin/contratos", label: "Contratos", icon: FileStack, description: "Gestão de contratos de serviço" },
+  { href: "/admin/parcelas", label: "Parcelas", icon: CalendarDays, description: "Acompanhamento de parcelas" },
+  { href: "/admin/arquivos", label: "Arquivos Retorno", icon: FileUp, description: "Upload de arquivos bancários" },
+  { href: "/admin/pagamentos", label: "Pagamentos", icon: Receipt, description: "Processamento de pagamentos" },
+  { href: "/admin/baixas", label: "Baixa Manual", icon: CheckCircle, description: "Baixa manual de parcelas" },
+  { href: "/admin/fundos", label: "Fundos FIDC", icon: Building2, description: "Gestão dos fundos de investimento" },
+  { href: "/admin/escrow", label: "Contas Escrow", icon: Wallet, description: "Saldos de garantia por lojista" },
+  { href: "/admin/ledger", label: "Extrato Escrow", icon: BookOpen, description: "Movimentações de entrada e saída" },
+  { href: "/admin/conciliacao", label: "Conciliação", icon: FileCheck, description: "Arquivos de retorno bancário" },
+  { href: "/admin/drawdowns", label: "Saques Escrow", icon: AlertTriangle, description: "Saques para cobrir inadimplência" },
+  { href: "/admin/merchants", label: "Lojistas", icon: Users, description: "Cadastro de lojistas" },
+  { href: "/admin/clientes", label: "Clientes Finais", icon: UserCheck, description: "Clientes dos lojistas" },
+  { href: "/admin/transacoes", label: "Transações", icon: CreditCard, description: "Transações de cartão PL" },
+  { href: "/admin/simulador", label: "Simulador", icon: Play, description: "Simular antecipação" },
+  { href: "/admin/configuracoes", label: "Configurações", icon: Settings, description: "Configurações do sistema" },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
@@ -73,6 +73,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               key={item.href}
               href={item.href}
               onClick={onNavigate}
+              title={item.description}
               className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
                 isActive

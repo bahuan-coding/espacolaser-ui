@@ -47,7 +47,12 @@ export function CustomBarChart({
           }}
           labelStyle={{ color: "var(--foreground)" }}
         />
-        {showLegend && <Legend />}
+        {showLegend && (
+          <Legend 
+            wrapperStyle={{ color: "var(--foreground)" }}
+            formatter={(value) => <span style={{ color: "var(--foreground)" }}>{value}</span>}
+          />
+        )}
         <Bar dataKey={dataKey} fill={color} radius={[8, 8, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
