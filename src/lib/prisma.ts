@@ -1,13 +1,13 @@
 import { PrismaClient } from "@/generated/prisma";
 import { neon } from "@netlify/neon";
-import { PrismaNeon } from "@prisma/adapter-neon";
+import { PrismaNeonHTTP } from "@prisma/adapter-neon";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function createPrismaClient() {
   // @netlify/neon automatically uses NETLIFY_DATABASE_URL
   const sql = neon();
-  const adapter = new PrismaNeon(sql);
+  const adapter = new PrismaNeonHTTP(sql);
   
   return new PrismaClient({ adapter });
 }
