@@ -96,7 +96,7 @@ export function AdminPagamentosTable({ payments, pagination, basePath, currentPa
         return (
           <div>
             <Link
-              href={`/contratos/${p.installment.contract.id}`}
+              href={`/admin/contratos/${p.installment.contract.id}`}
               className="text-violet-400 hover:text-violet-300"
             >
               {p.installment.contract.contractNumber}

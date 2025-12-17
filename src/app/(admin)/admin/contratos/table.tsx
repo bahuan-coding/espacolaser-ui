@@ -48,7 +48,7 @@ export function AdminContratosTable({ contracts, pagination, basePath, currentPa
       render: (c: ContractData) => (
         <div>
           <Link
-            href={`/contratos/${c.id}`}
+            href={`/admin/contratos/${c.id}`}
             className="text-violet-400 hover:text-violet-300 font-medium"
           >
             {c.contractNumber}

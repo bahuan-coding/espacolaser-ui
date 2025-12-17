@@ -20,28 +20,28 @@ interface AlertCardProps {
 
 const variantStyles: Record<AlertVariant, { bg: string; border: string; text: string; icon: ReactNode }> = {
   warning: {
-    bg: "bg-amber-50",
-    border: "border-amber-200",
-    text: "text-amber-800",
-    icon: <AlertTriangle className="w-5 h-5 text-amber-600" />,
+    bg: "bg-amber-50 dark:bg-amber-900/30",
+    border: "border-amber-200 dark:border-amber-800",
+    text: "text-amber-800 dark:text-amber-400",
+    icon: <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
   },
   danger: {
-    bg: "bg-red-50",
-    border: "border-red-200",
-    text: "text-red-800",
-    icon: <XCircle className="w-5 h-5 text-red-600" />,
+    bg: "bg-red-50 dark:bg-red-900/30",
+    border: "border-red-200 dark:border-red-800",
+    text: "text-red-800 dark:text-red-400",
+    icon: <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />,
   },
   success: {
-    bg: "bg-emerald-50",
-    border: "border-emerald-200",
-    text: "text-emerald-800",
-    icon: <CheckCircle className="w-5 h-5 text-emerald-600" />,
+    bg: "bg-emerald-50 dark:bg-emerald-900/30",
+    border: "border-emerald-200 dark:border-emerald-800",
+    text: "text-emerald-800 dark:text-emerald-400",
+    icon: <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
   },
   info: {
-    bg: "bg-cyan-50",
-    border: "border-cyan-200",
-    text: "text-cyan-800",
-    icon: <Info className="w-5 h-5 text-cyan-600" />,
+    bg: "bg-cyan-50 dark:bg-cyan-900/30",
+    border: "border-cyan-200 dark:border-cyan-800",
+    text: "text-cyan-800 dark:text-cyan-400",
+    icon: <Info className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />,
   },
 };
 
@@ -76,7 +76,7 @@ export function AlertCard({
             {title}
           </h4>
           {description && (
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
               {description}
             </p>
           )}
@@ -86,10 +86,10 @@ export function AlertCard({
               onClick={action.onClick}
               className={cn(
                 "inline-flex items-center gap-1 mt-2 text-sm font-medium transition-colors",
-                variant === "warning" && "text-amber-700 hover:text-amber-900",
-                variant === "danger" && "text-red-700 hover:text-red-900",
-                variant === "success" && "text-emerald-700 hover:text-emerald-900",
-                variant === "info" && "text-cyan-700 hover:text-cyan-900"
+                variant === "warning" && "text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300",
+                variant === "danger" && "text-red-700 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300",
+                variant === "success" && "text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300",
+                variant === "info" && "text-cyan-700 dark:text-cyan-400 hover:text-cyan-900 dark:hover:text-cyan-300"
               )}
             >
               {action.label}

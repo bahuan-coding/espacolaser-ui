@@ -7,7 +7,6 @@ import { PageContainer } from "@/components/shared/layout/page-container";
 import { Section } from "@/components/shared/layout/section";
 import { ContentCard } from "@/components/shared/ui/content-card";
 import { StatusBadge } from "@/components/shared/ui/status-badge";
-import { ContractActions } from "@/components/contratos/contract-actions";
 import { ContractTimeline } from "@/components/contratos/contract-timeline";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
@@ -46,7 +45,6 @@ async function getContractData(id: string) {
 
   if (!contract) return null;
 
-  // Get domain events for this contract
   const events = await prisma.domainEvent.findMany({
     where: {
       payload: {
@@ -61,7 +59,7 @@ async function getContractData(id: string) {
   return { contract, events };
 }
 
-export default async function ContratoDetailPage({ params }: PageProps) {
+export default async function AdminContratoDetailPage({ params }: PageProps) {
   const { id } = await params;
   const data = await getContractData(id);
 
@@ -76,15 +74,11 @@ export default async function ContratoDetailPage({ params }: PageProps) {
     .filter((i) => i.status === "paid")
     .reduce((sum, i) => sum + (i.paidAmountCents ?? i.amountCents), 0n);
 
-  const firstInstallment = contract.installments.find((i) => i.installmentNumber === 1);
-  const hasPaymentLink = contract.gatewayTransactions.length > 0;
-  const paymentLink = contract.gatewayTransactions[0]?.paymentLink;
-
   return (
     <PageContainer>
       <div className="mb-6">
         <Link
-          href="/contratos"
+          href="/admin/contratos"
           className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors font-medium"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -100,24 +94,17 @@ export default async function ContratoDetailPage({ params }: PageProps) {
         <StatusBadge status={contract.eligibilityStatus} type="eligibility" />
       </div>
 
-      {/* Contract Actions - Most important section */}
-      <Section>
-        <ContractActions
-          contractId={contract.id}
-          contractNumber={contract.contractNumber}
-          eligibilityStatus={contract.eligibilityStatus}
-          totalAmountCents={contract.totalAmountCents}
-          firstInstallmentAmountCents={firstInstallment?.amountCents ?? 0n}
-          hasPaymentLink={hasPaymentLink}
-          paymentLink={paymentLink}
-        />
-      </Section>
-
       <Section>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <ContentCard title="Lojista">
+            <div className="space-y-2">
+              <p className="text-slate-900 dark:text-slate-100 font-medium">{contract.merchant.name}</p>
+            </div>
+          </ContentCard>
+
           <ContentCard title="Cliente">
             <div className="space-y-2">
-              <p className="text-slate-900 dark:text-white font-medium">{contract.endCustomer.name}</p>
+              <p className="text-slate-900 dark:text-slate-100 font-medium">{contract.endCustomer.name}</p>
               <p className="text-sm text-slate-600 dark:text-slate-400 font-mono">{contract.endCustomer.document}</p>
               {contract.endCustomer.email && (
                 <p className="text-sm text-slate-500 dark:text-slate-500">{contract.endCustomer.email}</p>
@@ -144,29 +131,9 @@ export default async function ContratoDetailPage({ params }: PageProps) {
               </div>
             </div>
           </ContentCard>
-
-          <ContentCard title="Período">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Início:</span>
-                <span className="text-slate-700 dark:text-slate-300">{formatDate(contract.startDate)}</span>
-              </div>
-              {contract.endDate && (
-                <div className="flex justify-between">
-                  <span className="text-slate-500 dark:text-slate-400">Fim:</span>
-                  <span className="text-slate-700 dark:text-slate-300">{formatDate(contract.endDate)}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Criado:</span>
-                <span className="text-slate-700 dark:text-slate-300">{formatDate(contract.createdAt)}</span>
-              </div>
-            </div>
-          </ContentCard>
         </div>
       </Section>
 
-      {/* Cartões */}
       {(contract.plCard || contract.tokenizedCard) && (
         <Section>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -174,23 +141,23 @@ export default async function ContratoDetailPage({ params }: PageProps) {
               <ContentCard title="Cartão Private Label">
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Final:</span>
-                    <span className="text-slate-700 font-mono">**** {contract.plCard.lastFourDigits}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Final:</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-mono">**** {contract.plCard.lastFourDigits}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Status:</span>
+                    <span className="text-slate-500 dark:text-slate-400">Status:</span>
                     <StatusBadge status={contract.plCard.issuanceStatus} type="disbursement" />
                   </div>
                   {contract.plCard.creditLimitCents && (
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Limite:</span>
-                      <span className="text-slate-700">{formatCurrency(contract.plCard.creditLimitCents)}</span>
+                      <span className="text-slate-500 dark:text-slate-400">Limite:</span>
+                      <span className="text-slate-700 dark:text-slate-300">{formatCurrency(contract.plCard.creditLimitCents)}</span>
                     </div>
                   )}
                   {contract.plCard.issuedAt && (
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Emitido:</span>
-                      <span className="text-slate-700">{formatDate(contract.plCard.issuedAt)}</span>
+                      <span className="text-slate-500 dark:text-slate-400">Emitido:</span>
+                      <span className="text-slate-700 dark:text-slate-300">{formatDate(contract.plCard.issuedAt)}</span>
                     </div>
                   )}
                 </div>
@@ -200,15 +167,15 @@ export default async function ContratoDetailPage({ params }: PageProps) {
               <ContentCard title="Cartão Tokenizado (Fallback)">
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Final:</span>
-                    <span className="text-slate-700 font-mono">**** {contract.tokenizedCard.lastFourDigits}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Final:</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-mono">**** {contract.tokenizedCard.lastFourDigits}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Bandeira:</span>
-                    <span className="text-slate-700 uppercase">{contract.tokenizedCard.brand}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Bandeira:</span>
+                    <span className="text-slate-700 dark:text-slate-300 uppercase">{contract.tokenizedCard.brand}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Status:</span>
+                    <span className="text-slate-500 dark:text-slate-400">Status:</span>
                     <StatusBadge status={contract.tokenizedCard.tokenizationStatus} type="disbursement" />
                   </div>
                 </div>
@@ -218,7 +185,6 @@ export default async function ContratoDetailPage({ params }: PageProps) {
         </Section>
       )}
 
-      {/* Desembolsos */}
       {contract.disbursements.length > 0 && (
         <Section>
           <ContentCard title="Desembolsos FIDC">
@@ -247,7 +213,6 @@ export default async function ContratoDetailPage({ params }: PageProps) {
 
       <Section>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Timeline de Parcelas */}
           <ContentCard title="Parcelas do Contrato">
             <div className="space-y-3">
               {contract.installments.map((inst) => (
@@ -274,11 +239,6 @@ export default async function ContratoDetailPage({ params }: PageProps) {
                           1ª Fatura PL
                         </span>
                       )}
-                      {inst.contributesToSubQuota && (
-                        <span className="text-xs px-2 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded">
-                          Cota Sub
-                        </span>
-                      )}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                       Vence: {formatDate(inst.dueDate)}
@@ -291,7 +251,6 @@ export default async function ContratoDetailPage({ params }: PageProps) {
             </div>
           </ContentCard>
 
-          {/* Histórico de Eventos */}
           <ContractTimeline events={events as any} />
         </div>
       </Section>

@@ -26,7 +26,7 @@ export default async function MainLayout({
 
   return (
     <MobileNavProvider>
-      <div className="min-h-screen bg-slate-50 flex">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex">
         <MainSidebar />
         <MobileSidebar />
         <div className="flex-1 flex flex-col min-w-0">

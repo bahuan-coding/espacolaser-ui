@@ -28,6 +28,7 @@ async function getTransacoesData(page: number, status?: string) {
         merchant: { select: { name: true } },
         contract: {
           select: {
+            id: true,
             contractNumber: true,
             endCustomer: { select: { name: true } },
           },

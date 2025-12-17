@@ -120,7 +120,12 @@ export function AdminMerchantsTable({ merchants, pagination, searchParams }: Adm
           <div className="flex gap-2">
             {pagination.page > 1 && (
               <Link
-                href={`/admin/merchants?${searchParams.search ? `search=${searchParams.search}&` : ""}page=${pagination.page - 1}`}
+                href={(() => {
+                  const params = new URLSearchParams();
+                  params.set("page", String(pagination.page - 1));
+                  if (searchParams.search) params.set("search", searchParams.search);
+                  return `/admin/merchants?${params.toString()}`;
+                })()}
                 className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
               >
                 Anterior
@@ -128,7 +133,12 @@ export function AdminMerchantsTable({ merchants, pagination, searchParams }: Adm
             )}
             {pagination.page < pagination.totalPages && (
               <Link
-                href={`/admin/merchants?${searchParams.search ? `search=${searchParams.search}&` : ""}page=${pagination.page + 1}`}
+                href={(() => {
+                  const params = new URLSearchParams();
+                  params.set("page", String(pagination.page + 1));
+                  if (searchParams.search) params.set("search", searchParams.search);
+                  return `/admin/merchants?${params.toString()}`;
+                })()}
                 className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
               >
                 Próxima

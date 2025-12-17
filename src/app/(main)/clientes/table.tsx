@@ -133,22 +133,34 @@ export function ClientesTable({ customers, pagination, searchParams }: ClientesT
 
       {pagination.totalPages > 1 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Página {pagination.page} de {pagination.totalPages}
           </p>
           <div className="flex gap-2">
             {pagination.page > 1 && (
               <Link
-                href={`/clientes?page=${pagination.page - 1}${searchParams.search ? `&search=${searchParams.search}` : ""}${searchParams.status ? `&status=${searchParams.status}` : ""}`}
-                className="px-4 py-2 text-sm rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors font-medium"
+                href={(() => {
+                  const params = new URLSearchParams();
+                  params.set("page", String(pagination.page - 1));
+                  if (searchParams.search) params.set("search", searchParams.search);
+                  if (searchParams.status) params.set("status", searchParams.status);
+                  return `/clientes?${params.toString()}`;
+                })()}
+                className="px-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors font-medium"
               >
                 Anterior
               </Link>
             )}
             {pagination.page < pagination.totalPages && (
               <Link
-                href={`/clientes?page=${pagination.page + 1}${searchParams.search ? `&search=${searchParams.search}` : ""}${searchParams.status ? `&status=${searchParams.status}` : ""}`}
-                className="px-4 py-2 text-sm rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors font-medium"
+                href={(() => {
+                  const params = new URLSearchParams();
+                  params.set("page", String(pagination.page + 1));
+                  if (searchParams.search) params.set("search", searchParams.search);
+                  if (searchParams.status) params.set("status", searchParams.status);
+                  return `/clientes?${params.toString()}`;
+                })()}
+                className="px-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors font-medium"
               >
                 Próxima
               </Link>

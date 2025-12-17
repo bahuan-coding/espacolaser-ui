@@ -107,8 +107,8 @@ export default async function ContratosPage({ searchParams }: PageProps) {
     <PageContainer>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Contratos</h1>
-          <p className="text-slate-500 mt-1">Gestão de contratos e parcelas do Private Label</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Contratos</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Gestão de contratos e parcelas do Private Label</p>
         </div>
         <Link
           href="/contratos/novo"

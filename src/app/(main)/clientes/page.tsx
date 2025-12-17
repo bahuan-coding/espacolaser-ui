@@ -191,11 +191,16 @@ export default async function ClientesPage({ searchParams }: PageProps) {
             {statusFilters.map((filter) => (
               <Link
                 key={filter.value}
-                href={`/clientes${filter.value ? `?status=${filter.value}` : ""}${params.search ? `${filter.value ? "&" : "?"}search=${params.search}` : ""}`}
+                href={(() => {
+                  const urlParams = new URLSearchParams();
+                  if (filter.value) urlParams.set("status", filter.value);
+                  if (params.search) urlParams.set("search", params.search);
+                  return `/clientes${urlParams.toString() ? `?${urlParams.toString()}` : ""}`;
+                })()}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                   params.status === filter.value || (!params.status && filter.value === "")
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                    : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300"
+                    ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
+                    : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
                 }`}
               >
                 {filter.label}

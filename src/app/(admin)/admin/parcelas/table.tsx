@@ -50,7 +50,7 @@ export function AdminParcelasTable({ installments, pagination, basePath, current
       render: (i: InstallmentData) => (
         <div>
           <Link
-            href={`/contratos/${i.contract.id}`}
+            href={`/admin/contratos/${i.contract.id}`}
             className="text-violet-400 hover:text-violet-300 font-medium"
           >
             {i.contract.contractNumber}

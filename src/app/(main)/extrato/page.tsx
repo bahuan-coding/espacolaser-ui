@@ -260,23 +260,39 @@ export default async function ExtratoPage({ searchParams }: PageProps) {
 
           {/* Pagination */}
           {data.pagination.totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-slate-100">
-              <p className="text-sm text-slate-500">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Página {data.pagination.page} de {data.pagination.totalPages} ({data.pagination.total} registros)
               </p>
               <div className="flex gap-2">
                 {data.pagination.page > 1 && (
                   <Link
-                    href={`/extrato?page=${data.pagination.page - 1}${params.type ? `&type=${params.type}` : ""}${params.startDate ? `&startDate=${params.startDate}` : ""}${params.endDate ? `&endDate=${params.endDate}` : ""}${params.referenceType ? `&referenceType=${params.referenceType}` : ""}`}
-                    className="px-4 py-2 text-sm rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors font-medium"
+                    href={(() => {
+                      const urlParams = new URLSearchParams();
+                      urlParams.set("page", String(data.pagination.page - 1));
+                      if (params.type) urlParams.set("type", params.type);
+                      if (params.startDate) urlParams.set("startDate", params.startDate);
+                      if (params.endDate) urlParams.set("endDate", params.endDate);
+                      if (params.referenceType) urlParams.set("referenceType", params.referenceType);
+                      return `/extrato?${urlParams.toString()}`;
+                    })()}
+                    className="px-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors font-medium"
                   >
                     Anterior
                   </Link>
                 )}
                 {data.pagination.page < data.pagination.totalPages && (
                   <Link
-                    href={`/extrato?page=${data.pagination.page + 1}${params.type ? `&type=${params.type}` : ""}${params.startDate ? `&startDate=${params.startDate}` : ""}${params.endDate ? `&endDate=${params.endDate}` : ""}${params.referenceType ? `&referenceType=${params.referenceType}` : ""}`}
-                    className="px-4 py-2 text-sm rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors font-medium"
+                    href={(() => {
+                      const urlParams = new URLSearchParams();
+                      urlParams.set("page", String(data.pagination.page + 1));
+                      if (params.type) urlParams.set("type", params.type);
+                      if (params.startDate) urlParams.set("startDate", params.startDate);
+                      if (params.endDate) urlParams.set("endDate", params.endDate);
+                      if (params.referenceType) urlParams.set("referenceType", params.referenceType);
+                      return `/extrato?${urlParams.toString()}`;
+                    })()}
+                    className="px-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors font-medium"
                   >
                     Próxima
                   </Link>

@@ -13,6 +13,7 @@ interface TransactionData {
   processedAt: Date;
   merchant: { name: string };
   contract: {
+    id: string;
     contractNumber: string;
     endCustomer: { name: string };
   } | null;
@@ -61,7 +62,7 @@ export function AdminTransacoesTable({ transactions, pagination, searchParams }:
           {t.contract ? (
             <>
               <Link
-                href={`/contratos/${t.contract.contractNumber}`}
+                href={`/admin/contratos/${t.contract.id}`}
                 className="text-violet-400 hover:text-violet-300 text-sm"
               >
                 {t.contract.contractNumber}
@@ -128,7 +129,12 @@ export function AdminTransacoesTable({ transactions, pagination, searchParams }:
           <div className="flex gap-2">
             {pagination.page > 1 && (
               <Link
-                href={`/admin/transacoes?${searchParams.status ? `status=${searchParams.status}&` : ""}page=${pagination.page - 1}`}
+                href={(() => {
+                  const params = new URLSearchParams();
+                  params.set("page", String(pagination.page - 1));
+                  if (searchParams.status) params.set("status", searchParams.status);
+                  return `/admin/transacoes?${params.toString()}`;
+                })()}
                 className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
               >
                 Anterior
@@ -136,7 +142,12 @@ export function AdminTransacoesTable({ transactions, pagination, searchParams }:
             )}
             {pagination.page < pagination.totalPages && (
               <Link
-                href={`/admin/transacoes?${searchParams.status ? `status=${searchParams.status}&` : ""}page=${pagination.page + 1}`}
+                href={(() => {
+                  const params = new URLSearchParams();
+                  params.set("page", String(pagination.page + 1));
+                  if (searchParams.status) params.set("status", searchParams.status);
+                  return `/admin/transacoes?${params.toString()}`;
+                })()}
                 className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
               >
                 Próxima
