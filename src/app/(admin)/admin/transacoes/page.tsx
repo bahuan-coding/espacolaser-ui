@@ -4,11 +4,10 @@ import { PageContainer } from "@/components/shared/layout/page-container";
 import { PageHeader } from "@/components/shared/layout/page-header";
 import { Section } from "@/components/shared/layout/section";
 import { MetricCard } from "@/components/shared/ui/metric-card";
-import { DataTable } from "@/components/shared/ui/data-table";
-import { StatusBadge } from "@/components/shared/ui/status-badge";
 import { prisma } from "@/lib/prisma";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
+import { AdminTransacoesTable } from "./table";
 
 interface PageProps {
   searchParams: Promise<{ page?: string; status?: string }>;
@@ -52,97 +51,25 @@ async function getTransacoesData(page: number, status?: string) {
   }, {} as Record<string, { count: number; total: bigint }>);
 
   return {
-    transactions,
+    transactions: transactions.map((t) => ({
+      id: t.id,
+      gatewayTransactionId: t.gatewayTransactionId,
+      amountCents: t.amountCents,
+      status: t.status,
+      authorizationCode: t.authorizationCode,
+      processedAt: t.processedAt,
+      merchant: t.merchant,
+      contract: t.contract,
+    })),
     stats: statsMap,
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   };
 }
 
-const statusColors: Record<string, string> = {
-  authorized: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-  captured: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
-  settled: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-  refunded: "bg-violet-500/10 text-violet-400 border-violet-500/30",
-  failed: "bg-red-500/10 text-red-400 border-red-500/30",
-};
-
 export default async function TransacoesPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const page = parseInt(params.page || "1");
   const data = await getTransacoesData(page, params.status);
-
-  const columns = [
-    {
-      key: "gatewayTransactionId",
-      header: "ID Gateway",
-      render: (t: (typeof data.transactions)[0]) => (
-        <span className="text-white font-mono text-sm">{t.gatewayTransactionId}</span>
-      ),
-    },
-    {
-      key: "merchant",
-      header: "Lojista",
-      render: (t: (typeof data.transactions)[0]) => (
-        <span className="text-slate-300">{t.merchant.name}</span>
-      ),
-    },
-    {
-      key: "contract",
-      header: "Contrato / Cliente",
-      render: (t: (typeof data.transactions)[0]) => (
-        <div>
-          {t.contract ? (
-            <>
-              <Link
-                href={`/contratos/${t.contract.contractNumber}`}
-                className="text-violet-400 hover:text-violet-300 text-sm"
-              >
-                {t.contract.contractNumber}
-              </Link>
-              <p className="text-xs text-slate-500">{t.contract.endCustomer.name}</p>
-            </>
-          ) : (
-            <span className="text-slate-500">-</span>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "amount",
-      header: "Valor",
-      className: "text-right",
-      render: (t: (typeof data.transactions)[0]) => (
-        <span className="text-white font-medium">{formatCurrency(t.amountCents)}</span>
-      ),
-    },
-    {
-      key: "processedAt",
-      header: "Processado",
-      render: (t: (typeof data.transactions)[0]) => (
-        <span className="text-slate-400 text-sm">{formatDateTime(t.processedAt)}</span>
-      ),
-    },
-    {
-      key: "authCode",
-      header: "Autorização",
-      render: (t: (typeof data.transactions)[0]) => (
-        <span className="text-slate-500 font-mono text-xs">
-          {t.authorizationCode || "-"}
-        </span>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (t: (typeof data.transactions)[0]) => (
-        <span
-          className={`text-xs px-2 py-1 rounded border ${statusColors[t.status] || "bg-slate-700 text-slate-400 border-slate-600"}`}
-        >
-          {t.status}
-        </span>
-      ),
-    },
-  ];
 
   const statusFilters = [
     { value: "", label: "Todos" },
@@ -202,41 +129,17 @@ export default async function TransacoesPage({ searchParams }: PageProps) {
           ))}
         </div>
 
-        <DataTable
-          columns={columns}
-          data={data.transactions}
-          keyExtractor={(t) => t.id}
-          emptyMessage="Nenhuma transação encontrada"
+        <AdminTransacoesTable
+          transactions={data.transactions}
+          pagination={{
+            page: data.pagination.page,
+            totalPages: data.pagination.totalPages,
+          }}
+          searchParams={{
+            status: params.status,
+          }}
         />
-
-        {data.pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-slate-500">
-              Página {data.pagination.page} de {data.pagination.totalPages}
-            </p>
-            <div className="flex gap-2">
-              {data.pagination.page > 1 && (
-                <Link
-                  href={`/admin/transacoes?${params.status ? `status=${params.status}&` : ""}page=${data.pagination.page - 1}`}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
-                >
-                  Anterior
-                </Link>
-              )}
-              {data.pagination.page < data.pagination.totalPages && (
-                <Link
-                  href={`/admin/transacoes?${params.status ? `status=${params.status}&` : ""}page=${data.pagination.page + 1}`}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
-                >
-                  Próxima
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
       </Section>
     </PageContainer>
   );
 }
-
-

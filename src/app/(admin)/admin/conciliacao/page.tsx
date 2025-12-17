@@ -5,10 +5,8 @@ import { PageContainer } from "@/components/shared/layout/page-container";
 import { PageHeader } from "@/components/shared/layout/page-header";
 import { Section } from "@/components/shared/layout/section";
 import { MetricCard } from "@/components/shared/ui/metric-card";
-import { DataTable, Pagination } from "@/components/shared/ui/data-table";
-import { StatusBadge } from "@/components/shared/ui/status-badge";
 import { prisma } from "@/lib/prisma";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { AdminConciliacaoTable } from "./table";
 
 interface PageProps {
   searchParams: Promise<{ page?: string }>;
@@ -39,85 +37,28 @@ async function getConciliacaoData(page: number) {
   }, {} as Record<string, number>);
 
   return {
-    files,
+    files: files.map((f) => ({
+      id: f.id,
+      fileName: f.fileName,
+      source: f.source,
+      periodStart: f.periodStart,
+      periodEnd: f.periodEnd,
+      totalRecords: f.totalRecords,
+      matchedCount: f.matchedCount,
+      mismatchedCount: f.mismatchedCount,
+      status: f.status,
+      createdAt: f.createdAt,
+      _count: f._count,
+    })),
     stats: statsMap,
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   };
 }
 
-const statusVariant: Record<string, "success" | "warning" | "danger" | "default"> = {
-  matched: "success",
-  mismatched: "danger",
-  pending: "warning",
-  ignored: "default",
-};
-
 export default async function ConciliacaoPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const page = parseInt(params.page || "1");
   const data = await getConciliacaoData(page);
-
-  const columns = [
-    {
-      key: "fileName",
-      header: "Arquivo",
-      render: (f: typeof data.files[0]) => (
-        <div>
-          <p className="text-white font-medium">{f.fileName}</p>
-          <p className="text-xs text-slate-500">{formatDateTime(f.createdAt)}</p>
-        </div>
-      ),
-    },
-    {
-      key: "source",
-      header: "Fonte",
-      render: (f: typeof data.files[0]) => (
-        <span className="text-slate-300 uppercase text-xs">{f.source}</span>
-      ),
-    },
-    {
-      key: "period",
-      header: "Período",
-      render: (f: typeof data.files[0]) => (
-        <span className="text-slate-300">
-          {formatDate(f.periodStart)} - {formatDate(f.periodEnd)}
-        </span>
-      ),
-    },
-    {
-      key: "totalRecords",
-      header: "Registros",
-      className: "text-center",
-      render: (f: typeof data.files[0]) => (
-        <span className="text-slate-300">{f.totalRecords}</span>
-      ),
-    },
-    {
-      key: "matched",
-      header: "Conciliados",
-      className: "text-center",
-      render: (f: typeof data.files[0]) => (
-        <span className="text-emerald-400">{f.matchedCount}</span>
-      ),
-    },
-    {
-      key: "mismatched",
-      header: "Divergentes",
-      className: "text-center",
-      render: (f: typeof data.files[0]) => (
-        <span className={f.mismatchedCount > 0 ? "text-red-400" : "text-slate-500"}>
-          {f.mismatchedCount}
-        </span>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (f: typeof data.files[0]) => (
-        <StatusBadge status={f.status} type="disbursement" />
-      ),
-    },
-  ];
 
   return (
     <PageContainer>
@@ -157,14 +98,8 @@ export default async function ConciliacaoPage({ searchParams }: PageProps) {
       </Section>
 
       <Section>
-        <DataTable
-          columns={columns}
-          data={data.files}
-          keyExtractor={(f) => f.id}
-          emptyMessage="Nenhum arquivo de conciliação encontrado"
-        />
+        <AdminConciliacaoTable files={data.files} />
       </Section>
     </PageContainer>
   );
 }
-

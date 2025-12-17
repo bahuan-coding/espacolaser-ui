@@ -5,10 +5,8 @@ import { PageContainer } from "@/components/shared/layout/page-container";
 import { PageHeader } from "@/components/shared/layout/page-header";
 import { Section } from "@/components/shared/layout/section";
 import { MetricCard } from "@/components/shared/ui/metric-card";
-import { DataTable } from "@/components/shared/ui/data-table";
-import { StatusBadge } from "@/components/shared/ui/status-badge";
 import { prisma } from "@/lib/prisma";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { ClientesTable } from "./table";
 
 interface PageProps {
   searchParams: Promise<{
@@ -28,7 +26,6 @@ async function getClientesData(params: Awaited<PageProps["searchParams"]>) {
 
   if (!merchant) return null;
 
-  // Get customers that have contracts with this merchant
   const customerIds = await prisma.serviceContract.findMany({
     where: { merchantId: merchant.id },
     select: { endCustomerId: true },
@@ -75,7 +72,6 @@ async function getClientesData(params: Awaited<PageProps["searchParams"]>) {
     prisma.endCustomer.count({ where }),
   ]);
 
-  // Calculate stats
   const customersWithData = customers.map((customer) => {
     const hasLateInstallment = customer.contracts.some((c) =>
       c.installments.some((i) => i.status === "late" || i.status === "defaulted")
@@ -85,12 +81,20 @@ async function getClientesData(params: Awaited<PageProps["searchParams"]>) {
     const hasPlCard = customer.plCards.some((p) => p.issuanceStatus === "issued");
 
     return {
-      ...customer,
+      id: customer.id,
+      name: customer.name,
+      document: customer.document,
+      email: customer.email,
+      phone: customer.phone,
       hasLateInstallment,
       totalContracts,
       totalValue,
       hasPlCard,
       status: hasLateInstallment ? "late" : "active",
+      contracts: customer.contracts.map((c) => ({
+        id: c.id,
+        contractNumber: c.contractNumber,
+      })),
     };
   });
 
@@ -127,100 +131,18 @@ export default async function ClientesPage({ searchParams }: PageProps) {
     );
   }
 
-  const columns = [
-    {
-      key: "name",
-      header: "Cliente",
-      render: (c: (typeof data.customers)[0]) => (
-        <div>
-          <p className="text-slate-900 font-medium">{c.name}</p>
-          <p className="text-xs text-slate-500 font-mono">{c.document}</p>
-        </div>
-      ),
-    },
-    {
-      key: "contact",
-      header: "Contato",
-      hideOnMobile: true,
-      render: (c: (typeof data.customers)[0]) => (
-        <div>
-          {c.email && <p className="text-sm text-slate-600">{c.email}</p>}
-          {c.phone && <p className="text-xs text-slate-500">{c.phone}</p>}
-          {!c.email && !c.phone && <span className="text-slate-400">-</span>}
-        </div>
-      ),
-    },
-    {
-      key: "contracts",
-      header: "Contratos",
-      className: "text-center",
-      render: (c: (typeof data.customers)[0]) => (
-        <span className="text-slate-700">{c.totalContracts}</span>
-      ),
-    },
-    {
-      key: "totalValue",
-      header: "Valor Total",
-      hideOnMobile: true,
-      className: "text-right",
-      render: (c: (typeof data.customers)[0]) => (
-        <span className="text-slate-900 font-medium">{formatCurrency(c.totalValue)}</span>
-      ),
-    },
-    {
-      key: "plCard",
-      header: "Cartão PL",
-      hideOnMobile: true,
-      render: (c: (typeof data.customers)[0]) => (
-        c.hasPlCard ? (
-          <span className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
-            Ativo
-          </span>
-        ) : (
-          <span className="text-xs text-slate-400">-</span>
-        )
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (c: (typeof data.customers)[0]) => (
-        <span
-          className={`text-xs px-2.5 py-1 rounded-full font-medium border ${
-            c.hasLateInstallment
-              ? "bg-red-50 text-red-700 border-red-200"
-              : "bg-emerald-50 text-emerald-700 border-emerald-200"
-          }`}
-        >
-          {c.hasLateInstallment ? "Atraso" : "Em dia"}
-        </span>
-      ),
-    },
-    {
-      key: "actions",
-      header: "",
-      render: (c: (typeof data.customers)[0]) => (
-        <div className="flex gap-2 justify-end">
-          {c.contracts.map((contract) => (
-            <Link
-              key={contract.id}
-              href={`/contratos/${contract.id}`}
-              className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
-              title={`Ver contrato ${contract.contractNumber}`}
-            >
-              {contract.contractNumber.slice(-6)}
-            </Link>
-          ))}
-        </div>
-      ),
-    },
-  ];
-
   const statusFilters = [
     { value: "", label: "Todos" },
     { value: "active", label: "Em Dia" },
     { value: "late", label: "Em Atraso" },
   ];
+
+  const filteredCustomers = data.customers.filter((c) => {
+    if (!params.status) return true;
+    if (params.status === "late") return c.hasLateInstallment;
+    if (params.status === "active") return !c.hasLateInstallment;
+    return true;
+  });
 
   return (
     <PageContainer>
@@ -255,7 +177,6 @@ export default async function ClientesPage({ searchParams }: PageProps) {
       </Section>
 
       <Section>
-        {/* Search and filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-4">
           <form className="flex-1" action="/clientes" method="get">
             <input
@@ -283,45 +204,18 @@ export default async function ClientesPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          data={data.customers.filter((c) => {
-            if (!params.status) return true;
-            if (params.status === "late") return c.hasLateInstallment;
-            if (params.status === "active") return !c.hasLateInstallment;
-            return true;
-          })}
-          keyExtractor={(c) => c.id}
-          emptyMessage="Nenhum cliente encontrado"
+        <ClientesTable
+          customers={filteredCustomers}
+          pagination={{
+            page: data.pagination.page,
+            totalPages: data.pagination.totalPages,
+          }}
+          searchParams={{
+            search: params.search,
+            status: params.status,
+          }}
         />
-
-        {data.pagination.totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
-            <p className="text-sm text-slate-500">
-              Página {data.pagination.page} de {data.pagination.totalPages}
-            </p>
-            <div className="flex gap-2">
-              {data.pagination.page > 1 && (
-                <Link
-                  href={`/clientes?page=${data.pagination.page - 1}${params.search ? `&search=${params.search}` : ""}${params.status ? `&status=${params.status}` : ""}`}
-                  className="px-4 py-2 text-sm rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors font-medium"
-                >
-                  Anterior
-                </Link>
-              )}
-              {data.pagination.page < data.pagination.totalPages && (
-                <Link
-                  href={`/clientes?page=${data.pagination.page + 1}${params.search ? `&search=${params.search}` : ""}${params.status ? `&status=${params.status}` : ""}`}
-                  className="px-4 py-2 text-sm rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors font-medium"
-                >
-                  Próxima
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
       </Section>
     </PageContainer>
   );
 }
-

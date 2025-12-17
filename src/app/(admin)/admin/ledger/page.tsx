@@ -5,10 +5,9 @@ import { PageContainer } from "@/components/shared/layout/page-container";
 import { PageHeader } from "@/components/shared/layout/page-header";
 import { Section } from "@/components/shared/layout/section";
 import { MetricCard } from "@/components/shared/ui/metric-card";
-import { DataTable } from "@/components/shared/ui/data-table";
-import { StatusBadge } from "@/components/shared/ui/status-badge";
 import { prisma } from "@/lib/prisma";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
+import { AdminLedgerTable } from "./table";
 
 interface PageProps {
   searchParams: Promise<{
@@ -61,7 +60,20 @@ async function getLedgerData(params: Awaited<PageProps["searchParams"]>) {
   ]);
 
   return {
-    entries,
+    entries: entries.map((e) => ({
+      id: e.id,
+      createdAt: e.createdAt,
+      entryType: e.entryType,
+      amountCents: e.amountCents,
+      balanceAfterCents: e.balanceAfterCents,
+      description: e.description,
+      referenceType: e.referenceType,
+      referenceId: e.referenceId,
+      escrowAccount: {
+        merchant: e.escrowAccount.merchant,
+        fund: e.escrowAccount.fund,
+      },
+    })),
     stats: {
       totalCredits: credits._sum.amountCents ?? 0n,
       creditCount: credits._count,
@@ -82,71 +94,6 @@ const typeFilters = [
 export default async function LedgerPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const data = await getLedgerData(params);
-
-  const columns = [
-    {
-      key: "createdAt",
-      header: "Data",
-      render: (e: (typeof data.entries)[0]) => (
-        <span className="text-slate-300">{formatDateTime(e.createdAt)}</span>
-      ),
-    },
-    {
-      key: "merchant",
-      header: "Lojista",
-      render: (e: (typeof data.entries)[0]) => (
-        <div>
-          <p className="text-white font-medium">{e.escrowAccount.merchant.name}</p>
-          <p className="text-xs text-slate-500">{e.escrowAccount.fund.name}</p>
-        </div>
-      ),
-    },
-    {
-      key: "type",
-      header: "Tipo",
-      render: (e: (typeof data.entries)[0]) => (
-        <StatusBadge status={e.entryType} type="ledger" />
-      ),
-    },
-    {
-      key: "amount",
-      header: "Valor",
-      className: "text-right",
-      render: (e: (typeof data.entries)[0]) => (
-        <span className={`font-medium ${
-          e.entryType === "credit" ? "text-emerald-400" : "text-red-400"
-        }`}>
-          {e.entryType === "credit" ? "+" : "-"}{formatCurrency(e.amountCents)}
-        </span>
-      ),
-    },
-    {
-      key: "balanceAfter",
-      header: "Saldo Após",
-      className: "text-right",
-      render: (e: (typeof data.entries)[0]) => (
-        <span className="text-slate-300">{formatCurrency(e.balanceAfterCents)}</span>
-      ),
-    },
-    {
-      key: "description",
-      header: "Descrição",
-      render: (e: (typeof data.entries)[0]) => (
-        <span className="text-slate-400 text-sm">
-          {e.description || e.referenceType || "-"}
-        </span>
-      ),
-    },
-    {
-      key: "reference",
-      header: "Referência",
-      render: (e: (typeof data.entries)[0]) => (
-        <span className="text-xs text-slate-500 font-mono">
-          {e.referenceId ? `${e.referenceType}: ${e.referenceId.slice(0, 8)}...` : "-"}
-        </span>
-      ),
-    },
-  ];
 
   const buildUrl = (newParams: Record<string, string | undefined>) => {
     const merged = { ...params, ...newParams };
@@ -191,7 +138,6 @@ export default async function LedgerPage({ searchParams }: PageProps) {
 
       <Section>
         <div className="flex flex-wrap gap-4 mb-4">
-          {/* Type Filters */}
           <div className="flex gap-2">
             {typeFilters.map((filter) => (
               <Link
@@ -208,7 +154,6 @@ export default async function LedgerPage({ searchParams }: PageProps) {
             ))}
           </div>
 
-          {/* Merchant Filter */}
           <select
             defaultValue={params.merchant || ""}
             onChange={(e) => {
@@ -223,40 +168,16 @@ export default async function LedgerPage({ searchParams }: PageProps) {
           </select>
         </div>
 
-        <DataTable
-          columns={columns}
-          data={data.entries}
-          keyExtractor={(e) => e.id}
-          emptyMessage="Nenhuma movimentação encontrada"
+        <AdminLedgerTable
+          entries={data.entries}
+          pagination={{
+            page: data.pagination.page,
+            total: data.pagination.total,
+            totalPages: data.pagination.totalPages,
+          }}
+          buildUrl={buildUrl}
         />
-
-        {data.pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-slate-500">
-              Página {data.pagination.page} de {data.pagination.totalPages} ({data.pagination.total} movimentações)
-            </p>
-            <div className="flex gap-2">
-              {data.pagination.page > 1 && (
-                <Link
-                  href={buildUrl({ page: String(data.pagination.page - 1) })}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
-                >
-                  Anterior
-                </Link>
-              )}
-              {data.pagination.page < data.pagination.totalPages && (
-                <Link
-                  href={buildUrl({ page: String(data.pagination.page + 1) })}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
-                >
-                  Próxima
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
       </Section>
     </PageContainer>
   );
 }
-

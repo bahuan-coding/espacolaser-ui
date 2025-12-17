@@ -1,15 +1,13 @@
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
 import { Plus } from "lucide-react";
 import { PageContainer } from "@/components/shared/layout/page-container";
 import { PageHeader } from "@/components/shared/layout/page-header";
 import { Section } from "@/components/shared/layout/section";
 import { MetricCard } from "@/components/shared/ui/metric-card";
-import { DataTable } from "@/components/shared/ui/data-table";
-import { StatusBadge } from "@/components/shared/ui/status-badge";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
+import { AdminFundosTable } from "./table";
 
 interface PageProps {
   searchParams: Promise<{ page?: string }>;
@@ -47,7 +45,13 @@ async function getFundosData(page: number) {
 
   return {
     funds: funds.map((f) => ({
-      ...f,
+      id: f.id,
+      name: f.name,
+      document: f.document,
+      adminName: f.adminName,
+      managerName: f.managerName,
+      isActive: f.isActive,
+      _count: f._count,
       totalDisbursed: f.disbursements.reduce((sum, d) => sum + d.totalAmountCents, 0n),
       totalRepaid: f.repayments.reduce((sum, r) => sum + r.amountCents, 0n),
     })),
@@ -63,68 +67,6 @@ export default async function FundosPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const page = parseInt(params.page || "1");
   const data = await getFundosData(page);
-
-  const columns = [
-    {
-      key: "name",
-      header: "Fundo",
-      render: (f: (typeof data.funds)[0]) => (
-        <div>
-          <p className="text-white font-medium">{f.name}</p>
-          <p className="text-xs text-slate-500">{f.document}</p>
-        </div>
-      ),
-    },
-    {
-      key: "admin",
-      header: "Admin / Gestor",
-      render: (f: (typeof data.funds)[0]) => (
-        <div>
-          <p className="text-slate-300">{f.adminName || "-"}</p>
-          <p className="text-xs text-slate-500">{f.managerName || "-"}</p>
-        </div>
-      ),
-    },
-    {
-      key: "totalDisbursed",
-      header: "Desembolsado",
-      className: "text-right",
-      render: (f: (typeof data.funds)[0]) => (
-        <span className="text-emerald-400 font-medium">
-          {formatCurrency(f.totalDisbursed)}
-        </span>
-      ),
-    },
-    {
-      key: "totalRepaid",
-      header: "Repago",
-      className: "text-right",
-      render: (f: (typeof data.funds)[0]) => (
-        <span className="text-cyan-400 font-medium">
-          {formatCurrency(f.totalRepaid)}
-        </span>
-      ),
-    },
-    {
-      key: "escrowAccounts",
-      header: "Escrows",
-      className: "text-center",
-      render: (f: (typeof data.funds)[0]) => (
-        <span className="text-slate-300">{f._count.escrowAccounts}</span>
-      ),
-    },
-    {
-      key: "isActive",
-      header: "Status",
-      render: (f: (typeof data.funds)[0]) => (
-        <StatusBadge
-          status={f.isActive ? "paid" : "cancelled"}
-          type="installment"
-          showLabel={false}
-        />
-      ),
-    },
-  ];
 
   return (
     <PageContainer>
@@ -159,38 +101,13 @@ export default async function FundosPage({ searchParams }: PageProps) {
       </Section>
 
       <Section>
-        <DataTable
-          columns={columns}
-          data={data.funds}
-          keyExtractor={(f) => f.id}
-          emptyMessage="Nenhum fundo cadastrado"
+        <AdminFundosTable
+          funds={data.funds}
+          pagination={{
+            page: data.pagination.page,
+            totalPages: data.pagination.totalPages,
+          }}
         />
-
-        {data.pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-slate-500">
-              Página {data.pagination.page} de {data.pagination.totalPages}
-            </p>
-            <div className="flex gap-2">
-              {data.pagination.page > 1 && (
-                <Link
-                  href={`/admin/fundos?page=${data.pagination.page - 1}`}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
-                >
-                  Anterior
-                </Link>
-              )}
-              {data.pagination.page < data.pagination.totalPages && (
-                <Link
-                  href={`/admin/fundos?page=${data.pagination.page + 1}`}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
-                >
-                  Próxima
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
       </Section>
     </PageContainer>
   );

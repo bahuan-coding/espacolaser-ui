@@ -5,10 +5,8 @@ import { PageContainer } from "@/components/shared/layout/page-container";
 import { PageHeader } from "@/components/shared/layout/page-header";
 import { Section } from "@/components/shared/layout/section";
 import { MetricCard } from "@/components/shared/ui/metric-card";
-import { DataTable } from "@/components/shared/ui/data-table";
 import { prisma } from "@/lib/prisma";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
-import { PaymentActions } from "./payment-actions";
+import { AdminPagamentosTable } from "./table";
 
 interface PageProps {
   searchParams: Promise<{
@@ -68,29 +66,31 @@ async function getPagamentosData(params: {
   );
 
   return {
-    payments,
+    payments: payments.map((p) => ({
+      id: p.id,
+      paidAmountCents: p.paidAmountCents,
+      paymentDate: p.paymentDate,
+      paymentMethod: p.paymentMethod,
+      customerName: p.customerName,
+      customerDocument: p.customerDocument,
+      matchStatus: p.matchStatus,
+      createdBy: p.createdBy,
+      installment: p.installment
+        ? {
+            installmentNumber: p.installment.installmentNumber,
+            contract: {
+              id: p.installment.contract.id,
+              contractNumber: p.installment.contract.contractNumber,
+              endCustomer: { name: p.installment.contract.endCustomer.name },
+            },
+          }
+        : null,
+      returnFile: p.returnFile,
+    })),
     stats: statsMap,
     pagination: { page: params.page, limit, total, totalPages: Math.ceil(total / limit) },
   };
 }
-
-const matchStatusColors: Record<string, string> = {
-  pending: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-  auto_matched: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-  manual_matched: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
-  unmatched: "bg-red-500/10 text-red-400 border-red-500/30",
-  disputed: "bg-violet-500/10 text-violet-400 border-violet-500/30",
-};
-
-const methodLabels: Record<string, string> = {
-  boleto: "Boleto",
-  pix: "PIX",
-  credit_card: "Cartão",
-  debit_card: "Débito",
-  bank_transfer: "TED",
-  escrow_drawdown: "Escrow",
-  fallback_charge: "Fallback",
-};
 
 const matchStatusFilters = [
   { value: "", label: "Todos" },
@@ -113,87 +113,6 @@ export default async function PagamentosPage({ searchParams }: PageProps) {
   const autoMatchedCount = data.stats["auto_matched"]?.count ?? 0;
   const manualMatchedCount = data.stats["manual_matched"]?.count ?? 0;
   const totalMatched = autoMatchedCount + manualMatchedCount;
-
-  const columns = [
-    {
-      key: "payment",
-      header: "Pagamento",
-      render: (p: (typeof data.payments)[0]) => (
-        <div>
-          <p className="text-white font-medium">{formatCurrency(p.paidAmountCents)}</p>
-          <p className="text-xs text-slate-500">
-            {formatDate(p.paymentDate)} • {methodLabels[p.paymentMethod] || p.paymentMethod}
-          </p>
-        </div>
-      ),
-    },
-    {
-      key: "customer",
-      header: "Pagador",
-      render: (p: (typeof data.payments)[0]) => (
-        <div>
-          <p className="text-slate-300">{p.customerName || "-"}</p>
-          <p className="text-xs text-slate-500">{p.customerDocument || "-"}</p>
-        </div>
-      ),
-    },
-    {
-      key: "installment",
-      header: "Parcela Vinculada",
-      render: (p: (typeof data.payments)[0]) => {
-        if (!p.installment) {
-          return <span className="text-slate-500">Não vinculado</span>;
-        }
-        return (
-          <div>
-            <Link
-              href={`/contratos/${p.installment.contract.id}`}
-              className="text-violet-400 hover:text-violet-300"
-            >
-              {p.installment.contract.contractNumber}
-            </Link>
-            <p className="text-xs text-slate-500">
-              Parcela {p.installment.installmentNumber} • {p.installment.contract.endCustomer.name}
-            </p>
-          </div>
-        );
-      },
-    },
-    {
-      key: "source",
-      header: "Origem",
-      render: (p: (typeof data.payments)[0]) => (
-        <span className="text-slate-400 text-sm">
-          {p.returnFile?.fileName || (p.createdBy ? "Manual" : "-")}
-        </span>
-      ),
-    },
-    {
-      key: "matchStatus",
-      header: "Status",
-      render: (p: (typeof data.payments)[0]) => (
-        <span
-          className={`text-xs px-2 py-1 rounded border ${
-            matchStatusColors[p.matchStatus] || matchStatusColors.pending
-          }`}
-        >
-          {p.matchStatus.replace("_", " ")}
-        </span>
-      ),
-    },
-    {
-      key: "actions",
-      header: "",
-      className: "text-right",
-      render: (p: (typeof data.payments)[0]) => (
-        <PaymentActions
-          paymentId={p.id}
-          matchStatus={p.matchStatus}
-          hasInstallment={!!p.installment}
-        />
-      ),
-    },
-  ];
 
   const buildUrl = (newParams: Record<string, string | undefined>) => {
     const merged = { ...params, ...newParams };
@@ -262,40 +181,15 @@ export default async function PagamentosPage({ searchParams }: PageProps) {
           ))}
         </div>
 
-        <DataTable
-          columns={columns}
-          data={data.payments}
-          keyExtractor={(p) => p.id}
-          emptyMessage="Nenhum pagamento encontrado"
+        <AdminPagamentosTable
+          payments={data.payments}
+          pagination={{
+            page: data.pagination.page,
+            totalPages: data.pagination.totalPages,
+          }}
+          buildUrl={buildUrl}
         />
-
-        {data.pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-slate-500">
-              Página {data.pagination.page} de {data.pagination.totalPages}
-            </p>
-            <div className="flex gap-2">
-              {data.pagination.page > 1 && (
-                <Link
-                  href={buildUrl({ page: String(data.pagination.page - 1) })}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
-                >
-                  Anterior
-                </Link>
-              )}
-              {data.pagination.page < data.pagination.totalPages && (
-                <Link
-                  href={buildUrl({ page: String(data.pagination.page + 1) })}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
-                >
-                  Próxima
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
       </Section>
     </PageContainer>
   );
 }
-

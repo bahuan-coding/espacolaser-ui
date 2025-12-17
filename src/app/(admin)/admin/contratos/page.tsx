@@ -4,11 +4,9 @@ import { PageContainer } from "@/components/shared/layout/page-container";
 import { PageHeader } from "@/components/shared/layout/page-header";
 import { Section } from "@/components/shared/layout/section";
 import { MetricCard } from "@/components/shared/ui/metric-card";
-import { DataTable } from "@/components/shared/ui/data-table";
-import { StatusBadge } from "@/components/shared/ui/status-badge";
 import { prisma } from "@/lib/prisma";
-import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
+import { AdminContratosTable } from "./table";
 
 interface PageProps {
   searchParams: Promise<{
@@ -72,7 +70,14 @@ async function getContratosData(params: Awaited<PageProps["searchParams"]>) {
 
   return {
     contracts: contracts.map((c) => ({
-      ...c,
+      id: c.id,
+      contractNumber: c.contractNumber,
+      description: c.description,
+      totalAmountCents: c.totalAmountCents,
+      startDate: c.startDate,
+      eligibilityStatus: c.eligibilityStatus,
+      merchant: c.merchant,
+      endCustomer: c.endCustomer,
       paidCount: c.installments.filter((i) => i.status === "paid").length,
       lateCount: c.installments.filter((i) => i.status === "late" || i.status === "defaulted").length,
       totalInstallments: c._count.installments,
@@ -102,86 +107,6 @@ export default async function AdminContratosPage({ searchParams }: PageProps) {
   const eligible = (data.stats["eligible"]?.count ?? 0) + (data.stats["eligible_late"]?.count ?? 0);
   const pending = (data.stats["pending_first_installment"]?.count ?? 0) + (data.stats["pending_second_installment"]?.count ?? 0);
   const ineligible = data.stats["ineligible"]?.count ?? 0;
-
-  const columns = [
-    {
-      key: "contractNumber",
-      header: "Contrato",
-      render: (c: (typeof data.contracts)[0]) => (
-        <div>
-          <Link
-            href={`/contratos/${c.id}`}
-            className="text-violet-400 hover:text-violet-300 font-medium"
-          >
-            {c.contractNumber}
-          </Link>
-          <p className="text-xs text-slate-500">{c.description || "Contrato de serviço"}</p>
-        </div>
-      ),
-    },
-    {
-      key: "merchant",
-      header: "Lojista",
-      render: (c: (typeof data.contracts)[0]) => (
-        <span className="text-slate-300">{c.merchant.name}</span>
-      ),
-    },
-    {
-      key: "customer",
-      header: "Cliente",
-      render: (c: (typeof data.contracts)[0]) => (
-        <div>
-          <p className="text-slate-300">{c.endCustomer.name}</p>
-          <p className="text-xs text-slate-500">{c.endCustomer.document}</p>
-        </div>
-      ),
-    },
-    {
-      key: "totalAmount",
-      header: "Valor Total",
-      className: "text-right",
-      render: (c: (typeof data.contracts)[0]) => (
-        <span className="text-white font-medium">{formatCurrency(c.totalAmountCents)}</span>
-      ),
-    },
-    {
-      key: "installments",
-      header: "Parcelas",
-      className: "text-center",
-      render: (c: (typeof data.contracts)[0]) => (
-        <div>
-          <span className="text-slate-300">{c.paidCount}/{c.totalInstallments}</span>
-          {c.lateCount > 0 && (
-            <span className="text-xs text-red-400 ml-1">({c.lateCount} atraso)</span>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "disbursed",
-      header: "Desembolsado",
-      className: "text-right",
-      render: (c: (typeof data.contracts)[0]) => (
-        <span className={c.disbursedAmount > 0n ? "text-emerald-400" : "text-slate-500"}>
-          {c.disbursedAmount > 0n ? formatCurrency(c.disbursedAmount) : "-"}
-        </span>
-      ),
-    },
-    {
-      key: "startDate",
-      header: "Início",
-      render: (c: (typeof data.contracts)[0]) => (
-        <span className="text-slate-400 text-sm">{formatDate(c.startDate)}</span>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (c: (typeof data.contracts)[0]) => (
-        <StatusBadge status={c.eligibilityStatus} type="eligibility" />
-      ),
-    },
-  ];
 
   const buildUrl = (newParams: Record<string, string | undefined>) => {
     const merged = { ...params, ...newParams };
@@ -228,7 +153,6 @@ export default async function AdminContratosPage({ searchParams }: PageProps) {
 
       <Section>
         <div className="flex flex-wrap gap-4 mb-4">
-          {/* Search */}
           <form className="flex-1 min-w-[200px]">
             <input
               type="text"
@@ -239,7 +163,6 @@ export default async function AdminContratosPage({ searchParams }: PageProps) {
             />
           </form>
 
-          {/* Merchant Filter */}
           <select
             defaultValue={params.merchant || ""}
             onChange={(e) => {
@@ -254,7 +177,6 @@ export default async function AdminContratosPage({ searchParams }: PageProps) {
           </select>
         </div>
 
-        {/* Status Filters */}
         <div className="flex gap-2 mb-4 flex-wrap">
           {statusFilters.map((filter) => (
             <Link
@@ -271,40 +193,16 @@ export default async function AdminContratosPage({ searchParams }: PageProps) {
           ))}
         </div>
 
-        <DataTable
-          columns={columns}
-          data={data.contracts}
-          keyExtractor={(c) => c.id}
-          emptyMessage="Nenhum contrato encontrado"
+        <AdminContratosTable
+          contracts={data.contracts}
+          pagination={{
+            page: data.pagination.page,
+            total: data.pagination.total,
+            totalPages: data.pagination.totalPages,
+          }}
+          buildUrl={buildUrl}
         />
-
-        {data.pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-slate-500">
-              Página {data.pagination.page} de {data.pagination.totalPages} ({data.pagination.total} contratos)
-            </p>
-            <div className="flex gap-2">
-              {data.pagination.page > 1 && (
-                <Link
-                  href={buildUrl({ page: String(data.pagination.page - 1) })}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
-                >
-                  Anterior
-                </Link>
-              )}
-              {data.pagination.page < data.pagination.totalPages && (
-                <Link
-                  href={buildUrl({ page: String(data.pagination.page + 1) })}
-                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
-                >
-                  Próxima
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
       </Section>
     </PageContainer>
   );
 }
-
