@@ -168,8 +168,11 @@ export default async function AdminDashboardPage() {
           >
             {data.monthlyChartData.length > 0 ? (
               <CustomBarChart
-                data={data.monthlyChartData}
-                dataKey="valor"
+                data={data.monthlyChartData.map((item) => ({
+                  name: item.name,
+                  value: item.valor,
+                }))}
+                dataKey="value"
                 color="#8b5cf6"
                 height={250}
               />
