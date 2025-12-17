@@ -31,7 +31,8 @@ interface AdminPagamentosTableProps {
     page: number;
     totalPages: number;
   };
-  buildUrl: (params: Record<string, string | undefined>) => string;
+  basePath: string;
+  currentParams: Record<string, string | undefined>;
 }
 
 const matchStatusColors: Record<string, string> = {
@@ -52,7 +53,16 @@ const methodLabels: Record<string, string> = {
   fallback_charge: "Fallback",
 };
 
-export function AdminPagamentosTable({ payments, pagination, buildUrl }: AdminPagamentosTableProps) {
+export function AdminPagamentosTable({ payments, pagination, basePath, currentParams }: AdminPagamentosTableProps) {
+  const buildUrl = (newParams: Record<string, string | undefined>) => {
+    const merged = { ...currentParams, ...newParams };
+    const query = Object.entries(merged)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}=${v}`)
+      .join("&");
+    return `${basePath}${query ? `?${query}` : ""}`;
+  };
+
   const columns = [
     {
       key: "payment",

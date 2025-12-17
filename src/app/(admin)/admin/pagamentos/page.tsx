@@ -187,7 +187,8 @@ export default async function PagamentosPage({ searchParams }: PageProps) {
             page: data.pagination.page,
             totalPages: data.pagination.totalPages,
           }}
-          buildUrl={buildUrl}
+          basePath="/admin/pagamentos"
+          currentParams={params}
         />
       </Section>
     </PageContainer>

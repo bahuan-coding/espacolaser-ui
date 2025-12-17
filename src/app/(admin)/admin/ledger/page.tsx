@@ -175,7 +175,8 @@ export default async function LedgerPage({ searchParams }: PageProps) {
             total: data.pagination.total,
             totalPages: data.pagination.totalPages,
           }}
-          buildUrl={buildUrl}
+          basePath="/admin/ledger"
+          currentParams={params}
         />
       </Section>
     </PageContainer>

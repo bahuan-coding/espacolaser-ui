@@ -27,10 +27,20 @@ interface AdminLedgerTableProps {
     total: number;
     totalPages: number;
   };
-  buildUrl: (params: Record<string, string | undefined>) => string;
+  basePath: string;
+  currentParams: Record<string, string | undefined>;
 }
 
-export function AdminLedgerTable({ entries, pagination, buildUrl }: AdminLedgerTableProps) {
+export function AdminLedgerTable({ entries, pagination, basePath, currentParams }: AdminLedgerTableProps) {
+  const buildUrl = (newParams: Record<string, string | undefined>) => {
+    const merged = { ...currentParams, ...newParams };
+    const query = Object.entries(merged)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}=${v}`)
+      .join("&");
+    return `${basePath}${query ? `?${query}` : ""}`;
+  };
+
   const columns = [
     {
       key: "createdAt",

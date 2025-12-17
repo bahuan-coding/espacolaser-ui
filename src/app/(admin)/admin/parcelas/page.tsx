@@ -187,7 +187,8 @@ export default async function ParcelasPage({ searchParams }: PageProps) {
             total: data.pagination.total,
             totalPages: data.pagination.totalPages,
           }}
-          buildUrl={buildUrl}
+          basePath="/admin/parcelas"
+          currentParams={params}
         />
       </Section>
     </PageContainer>

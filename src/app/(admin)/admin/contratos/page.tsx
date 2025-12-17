@@ -200,7 +200,8 @@ export default async function AdminContratosPage({ searchParams }: PageProps) {
             total: data.pagination.total,
             totalPages: data.pagination.totalPages,
           }}
-          buildUrl={buildUrl}
+          basePath="/admin/contratos"
+          currentParams={params}
         />
       </Section>
     </PageContainer>

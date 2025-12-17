@@ -25,7 +25,8 @@ interface AdminDrawdownsTableProps {
     page: number;
     totalPages: number;
   };
-  buildUrl: (params: Record<string, string | undefined>) => string;
+  basePath: string;
+  currentParams: Record<string, string | undefined>;
 }
 
 const reasonLabels: Record<string, string> = {
@@ -35,7 +36,16 @@ const reasonLabels: Record<string, string> = {
   manual_adjustment: "Ajuste Manual",
 };
 
-export function AdminDrawdownsTable({ drawdowns, pagination, buildUrl }: AdminDrawdownsTableProps) {
+export function AdminDrawdownsTable({ drawdowns, pagination, basePath, currentParams }: AdminDrawdownsTableProps) {
+  const buildUrl = (newParams: Record<string, string | undefined>) => {
+    const merged = { ...currentParams, ...newParams };
+    const query = Object.entries(merged)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}=${v}`)
+      .join("&");
+    return `${basePath}${query ? `?${query}` : ""}`;
+  };
+
   const columns = [
     {
       key: "merchant",

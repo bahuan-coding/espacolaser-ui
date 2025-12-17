@@ -185,7 +185,8 @@ export default async function DrawdownsPage({ searchParams }: PageProps) {
             page: data.pagination.page,
             totalPages: data.pagination.totalPages,
           }}
-          buildUrl={buildUrl}
+          basePath="/admin/drawdowns"
+          currentParams={params}
         />
       </Section>
     </PageContainer>
