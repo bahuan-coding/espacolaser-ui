@@ -10,16 +10,28 @@ import {
   AlertTriangle,
   Users,
   Settings,
+  Play,
+  UserCheck,
+  CreditCard,
+  FileStack,
+  CalendarDays,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/contratos", label: "Contratos", icon: FileStack },
+  { href: "/admin/parcelas", label: "Parcelas", icon: CalendarDays },
   { href: "/admin/fundos", label: "Fundos FIDC", icon: Building2 },
   { href: "/admin/escrow", label: "Contas Escrow", icon: Wallet },
+  { href: "/admin/ledger", label: "Ledger Escrow", icon: BookOpen },
   { href: "/admin/conciliacao", label: "Conciliação", icon: FileCheck },
   { href: "/admin/drawdowns", label: "Drawdowns", icon: AlertTriangle },
   { href: "/admin/merchants", label: "Lojistas", icon: Users },
+  { href: "/admin/clientes", label: "Clientes Finais", icon: UserCheck },
+  { href: "/admin/transacoes", label: "Transações", icon: CreditCard },
+  { href: "/admin/simulador", label: "Simulador", icon: Play },
   { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
 ];
 

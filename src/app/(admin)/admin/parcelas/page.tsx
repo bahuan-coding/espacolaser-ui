@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { PageContainer } from "@/components/shared/layout/page-container";
 import { PageHeader } from "@/components/shared/layout/page-header";
 import { Section } from "@/components/shared/layout/section";
@@ -8,29 +9,22 @@ import { DataTable } from "@/components/shared/ui/data-table";
 import { StatusBadge } from "@/components/shared/ui/status-badge";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import Link from "next/link";
 
 interface PageProps {
   searchParams: Promise<{
     page?: string;
     status?: string;
+    origin?: string;
   }>;
 }
 
-async function getBoletosData(params: Awaited<PageProps["searchParams"]>) {
+async function getParcelasData(params: Awaited<PageProps["searchParams"]>) {
   const page = parseInt(params.page || "1");
-  const limit = 20;
-
-  const merchant = await prisma.merchant.findFirst({
-    where: { isActive: true },
-  });
-
-  if (!merchant) return null;
+  const limit = 25;
 
   const where = {
-    contract: { merchantId: merchant.id },
-    origin: "private_label" as const, // Only PL installments (not 1st via acquirer)
     ...(params.status && { status: params.status as any }),
+    ...(params.origin && { origin: params.origin as any }),
   };
 
   const [installments, total, stats] = await Promise.all([
@@ -42,7 +36,8 @@ async function getBoletosData(params: Awaited<PageProps["searchParams"]>) {
       include: {
         contract: {
           include: {
-            endCustomer: { select: { name: true, document: true } },
+            merchant: { select: { id: true, name: true } },
+            endCustomer: { select: { id: true, name: true, document: true } },
           },
         },
       },
@@ -50,7 +45,6 @@ async function getBoletosData(params: Awaited<PageProps["searchParams"]>) {
     prisma.contractInstallment.count({ where }),
     prisma.contractInstallment.groupBy({
       by: ["status"],
-      where: { contract: { merchantId: merchant.id }, origin: "private_label" },
       _count: true,
       _sum: { amountCents: true },
     }),
@@ -71,22 +65,24 @@ async function getBoletosData(params: Awaited<PageProps["searchParams"]>) {
   };
 }
 
-export default async function BoletosPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const data = await getBoletosData(params);
+const statusFilters = [
+  { value: "", label: "Todos" },
+  { value: "scheduled", label: "Agendadas" },
+  { value: "paid", label: "Pagas" },
+  { value: "late", label: "Atrasadas" },
+  { value: "defaulted", label: "Inadimplentes" },
+  { value: "cancelled", label: "Canceladas" },
+];
 
-  if (!data) {
-    return (
-      <PageContainer>
-        <PageHeader title="Boletos / Faturas" subtitle="Acompanhamento de cobranças" />
-        <Section>
-          <div className="p-6 bg-slate-900/50 border border-slate-800 rounded-2xl">
-            <p className="text-slate-400">Nenhum merchant encontrado.</p>
-          </div>
-        </Section>
-      </PageContainer>
-    );
-  }
+const originFilters = [
+  { value: "", label: "Todas Origens" },
+  { value: "private_label", label: "Private Label" },
+  { value: "external_capture", label: "Adquirente" },
+];
+
+export default async function ParcelasPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const data = await getParcelasData(params);
 
   const scheduled = data.stats["scheduled"]?.count ?? 0;
   const paid = data.stats["paid"]?.count ?? 0;
@@ -95,25 +91,28 @@ export default async function BoletosPage({ searchParams }: PageProps) {
 
   const columns = [
     {
-      key: "customer",
-      header: "Cliente",
+      key: "contract",
+      header: "Contrato",
       render: (i: (typeof data.installments)[0]) => (
         <div>
-          <p className="text-white font-medium">{i.contract.endCustomer.name}</p>
-          <p className="text-xs text-slate-500">{i.contract.endCustomer.document}</p>
+          <Link
+            href={`/contratos/${i.contract.id}`}
+            className="text-violet-400 hover:text-violet-300 font-medium"
+          >
+            {i.contract.contractNumber}
+          </Link>
+          <p className="text-xs text-slate-500">{i.contract.merchant.name}</p>
         </div>
       ),
     },
     {
-      key: "contract",
-      header: "Contrato",
+      key: "customer",
+      header: "Cliente",
       render: (i: (typeof data.installments)[0]) => (
-        <Link
-          href={`/contratos/${i.contract.id}`}
-          className="text-violet-400 hover:text-violet-300 text-sm"
-        >
-          {i.contract.contractNumber}
-        </Link>
+        <div>
+          <p className="text-slate-300">{i.contract.endCustomer.name}</p>
+          <p className="text-xs text-slate-500">{i.contract.endCustomer.document}</p>
+        </div>
       ),
     },
     {
@@ -121,9 +120,7 @@ export default async function BoletosPage({ searchParams }: PageProps) {
       header: "Parcela",
       className: "text-center",
       render: (i: (typeof data.installments)[0]) => (
-        <span className="text-slate-300">
-          {i.installmentNumber}/{i.contract.numberOfInstallments}
-        </span>
+        <span className="text-slate-300">{i.installmentNumber}</span>
       ),
     },
     {
@@ -141,7 +138,7 @@ export default async function BoletosPage({ searchParams }: PageProps) {
         <div>
           <p className="text-slate-300">{formatDate(i.dueDate)}</p>
           {i.daysOverdue > 0 && (
-            <p className="text-xs text-red-400">{i.daysOverdue} dias de atraso</p>
+            <p className="text-xs text-red-400">{i.daysOverdue}d atraso</p>
           )}
         </div>
       ),
@@ -150,8 +147,21 @@ export default async function BoletosPage({ searchParams }: PageProps) {
       key: "paidAt",
       header: "Pagamento",
       render: (i: (typeof data.installments)[0]) => (
-        <span className="text-slate-400">
+        <span className="text-slate-400 text-sm">
           {i.paidAt ? formatDate(i.paidAt) : "-"}
+        </span>
+      ),
+    },
+    {
+      key: "origin",
+      header: "Origem",
+      render: (i: (typeof data.installments)[0]) => (
+        <span className={`text-xs px-2 py-0.5 rounded ${
+          i.origin === "external_capture"
+            ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
+            : "bg-violet-500/10 text-violet-400 border border-violet-500/30"
+        }`}>
+          {i.origin === "external_capture" ? "Adquirente" : "PL"}
         </span>
       ),
     },
@@ -164,36 +174,37 @@ export default async function BoletosPage({ searchParams }: PageProps) {
     },
   ];
 
-  const statusFilters = [
-    { value: "", label: "Todos" },
-    { value: "scheduled", label: "Agendados" },
-    { value: "paid", label: "Pagos" },
-    { value: "late", label: "Atrasados" },
-    { value: "defaulted", label: "Inadimplentes" },
-  ];
+  const buildUrl = (newParams: Record<string, string | undefined>) => {
+    const merged = { ...params, ...newParams };
+    const query = Object.entries(merged)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}=${v}`)
+      .join("&");
+    return `/admin/parcelas${query ? `?${query}` : ""}`;
+  };
 
   return (
     <PageContainer>
       <PageHeader
-        title="Boletos / Faturas"
-        subtitle="Acompanhamento de parcelas do Private Label"
+        title="Parcelas (Admin)"
+        subtitle="Visão global de todas as parcelas do sistema"
       />
 
       <Section>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <MetricCard
-            label="Agendados"
+            label="Agendadas"
             value={scheduled.toString()}
             description={formatCurrency(data.stats["scheduled"]?.total ?? 0n)}
           />
           <MetricCard
-            label="Pagos"
+            label="Pagas"
             value={paid.toString()}
             variant="success"
             description={formatCurrency(data.stats["paid"]?.total ?? 0n)}
           />
           <MetricCard
-            label="Atrasados"
+            label="Atrasadas"
             value={late.toString()}
             description={formatCurrency(data.stats["late"]?.total ?? 0n)}
           />
@@ -206,38 +217,58 @@ export default async function BoletosPage({ searchParams }: PageProps) {
       </Section>
 
       <Section>
-        <div className="flex gap-2 mb-4">
-          {statusFilters.map((filter) => (
-            <Link
-              key={filter.value}
-              href={`/boletos${filter.value ? `?status=${filter.value}` : ""}`}
-              className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                params.status === filter.value || (!params.status && filter.value === "")
-                  ? "bg-violet-500/20 text-violet-400 border border-violet-500/30"
-                  : "bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700"
-              }`}
-            >
-              {filter.label}
-            </Link>
-          ))}
+        <div className="flex flex-wrap gap-4 mb-4">
+          {/* Status Filters */}
+          <div className="flex gap-2 flex-wrap">
+            {statusFilters.map((filter) => (
+              <Link
+                key={filter.value}
+                href={buildUrl({ status: filter.value || undefined, page: undefined })}
+                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  params.status === filter.value || (!params.status && filter.value === "")
+                    ? "bg-violet-500/20 text-violet-400 border border-violet-500/30"
+                    : "bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700"
+                }`}
+              >
+                {filter.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Origin Filter */}
+          <div className="flex gap-2">
+            {originFilters.map((filter) => (
+              <Link
+                key={filter.value}
+                href={buildUrl({ origin: filter.value || undefined, page: undefined })}
+                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  params.origin === filter.value || (!params.origin && filter.value === "")
+                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                    : "bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700"
+                }`}
+              >
+                {filter.label}
+              </Link>
+            ))}
+          </div>
         </div>
 
         <DataTable
           columns={columns}
           data={data.installments}
           keyExtractor={(i) => i.id}
-          emptyMessage="Nenhuma fatura encontrada"
+          emptyMessage="Nenhuma parcela encontrada"
         />
 
         {data.pagination.totalPages > 1 && (
           <div className="flex items-center justify-between mt-4">
             <p className="text-sm text-slate-500">
-              Página {data.pagination.page} de {data.pagination.totalPages}
+              Página {data.pagination.page} de {data.pagination.totalPages} ({data.pagination.total} parcelas)
             </p>
             <div className="flex gap-2">
               {data.pagination.page > 1 && (
                 <Link
-                  href={`/boletos?${params.status ? `status=${params.status}&` : ""}page=${data.pagination.page - 1}`}
+                  href={buildUrl({ page: String(data.pagination.page - 1) })}
                   className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
                 >
                   Anterior
@@ -245,7 +276,7 @@ export default async function BoletosPage({ searchParams }: PageProps) {
               )}
               {data.pagination.page < data.pagination.totalPages && (
                 <Link
-                  href={`/boletos?${params.status ? `status=${params.status}&` : ""}page=${data.pagination.page + 1}`}
+                  href={buildUrl({ page: String(data.pagination.page + 1) })}
                   className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
                 >
                   Próxima
@@ -258,3 +289,4 @@ export default async function BoletosPage({ searchParams }: PageProps) {
     </PageContainer>
   );
 }
+

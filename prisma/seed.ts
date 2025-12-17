@@ -14,8 +14,30 @@ const prisma = new PrismaClient({ adapter })
 // Helpers
 const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min
 const randomElement = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
-const generateCPF = () => `${randomInt(100, 999)}.${randomInt(100, 999)}.${randomInt(100, 999)}-${randomInt(10, 99)}`
-const generateCNPJ = () => `${randomInt(10, 99)}.${randomInt(100, 999)}.${randomInt(100, 999)}/0001-${randomInt(10, 99)}`
+
+// Valid CPF generator with check digits
+const generateCPF = () => {
+  const n = Array.from({ length: 9 }, () => randomInt(0, 9))
+  const d1 = (11 - (n.reduce((sum, v, i) => sum + v * (10 - i), 0) % 11)) % 11
+  n.push(d1 > 9 ? 0 : d1)
+  const d2 = (11 - (n.reduce((sum, v, i) => sum + v * (11 - i), 0) % 11)) % 11
+  n.push(d2 > 9 ? 0 : d2)
+  return `${n.slice(0, 3).join('')}.${n.slice(3, 6).join('')}.${n.slice(6, 9).join('')}-${n.slice(9).join('')}`
+}
+
+// Valid CNPJ generator with check digits
+const generateCNPJ = () => {
+  const n = Array.from({ length: 8 }, () => randomInt(0, 9))
+  n.push(0, 0, 0, 1) // Branch 0001
+  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  const d1 = (11 - (n.reduce((sum, v, i) => sum + v * weights1[i], 0) % 11)) % 11
+  n.push(d1 > 9 ? 0 : d1)
+  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  const d2 = (11 - (n.reduce((sum, v, i) => sum + v * weights2[i], 0) % 11)) % 11
+  n.push(d2 > 9 ? 0 : d2)
+  return `${n.slice(0, 2).join('')}.${n.slice(2, 5).join('')}.${n.slice(5, 8).join('')}/${n.slice(8, 12).join('')}-${n.slice(12).join('')}`
+}
+
 const generateToken = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 12)}`
 const addDays = (date: Date, days: number) => new Date(date.getTime() + days * 24 * 60 * 60 * 1000)
 const addMonths = (date: Date, months: number) => {
@@ -28,6 +50,20 @@ const addMonths = (date: Date, months: number) => {
 type TestCase = 'happy_path' | 'late_60d' | 'defaulted' | 'escrow_drawdown' | 'tokenization_failed'
 
 const merchantNames = ['Espaço Laser Centro', 'Espaço Laser Shopping', 'Espaço Laser Premium']
+
+// Realistic service packages
+const servicePackages = [
+  'Depilação Corpo Inteiro',
+  'Depilação Áreas Pequenas',
+  'Depilação Virilha + Axilas',
+  'Pacote Facial Completo',
+  'Tratamento Rejuvenescimento',
+  'Harmonização Facial',
+  'Pacote Pernas + Coxas',
+  'Depilação Masculina Costas',
+  'Tratamento Anti-Idade',
+  'Pacote Noivas Premium',
+]
 const customerNames = [
   'Ana Silva', 'Bruno Costa', 'Carla Oliveira', 'Daniel Santos', 'Elena Ferreira',
   'Fernando Lima', 'Gabriela Souza', 'Hugo Pereira', 'Isabela Almeida', 'João Rodrigues',
@@ -273,7 +309,7 @@ async function main() {
           merchantId: merchant.id,
           endCustomerId: customer.id,
           contractNumber: `CTR-${String(contractCount).padStart(6, '0')}`,
-          description: `Pacote estético ${numInstallments}x - ${testCase}`,
+          description: `${randomElement(servicePackages)} - ${numInstallments}x`,
           totalAmountCents: BigInt(totalValue),
           numberOfInstallments: numInstallments,
           startDate,
