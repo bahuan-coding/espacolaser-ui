@@ -5,7 +5,7 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function createPrismaClient() {
-  const connectionString = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL;
+  const connectionString = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL;
   
   if (!connectionString) {
     console.error("ENV vars available:", Object.keys(process.env).filter(k => k.includes('DATABASE') || k.includes('NETLIFY')));
