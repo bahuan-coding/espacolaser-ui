@@ -1,0 +1,620 @@
+// Private Label FIDC Data Model - Complete
+// Netlify Neon PostgreSQL + Prisma ORM
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum InstallmentStatus {
+  scheduled
+  paid
+  late
+  defaulted
+  cancelled
+}
+
+enum InstallmentOrigin {
+  private_label      // PL card invoice
+  external_capture   // 1st installment via acquirer
+}
+
+enum DisbursementStatus {
+  pending
+  posted
+  reversed
+}
+
+enum ReconciliationStatus {
+  pending
+  matched
+  mismatched
+  ignored
+}
+
+enum LedgerEntryType {
+  credit
+  debit
+}
+
+enum DrawdownReason {
+  late_payment
+  default_coverage
+  fee_charge
+  manual_adjustment
+}
+
+// NEW: Contract eligibility for FIDC funding
+enum ContractEligibilityStatus {
+  pending_first_installment   // Waiting 1st payment (acquirer)
+  pending_second_installment  // 1st paid, waiting 2nd (1st PL invoice)
+  eligible                    // 2nd paid on time, ready for disbursement
+  eligible_late               // 2nd paid with <=60d delay, still eligible
+  ineligible                  // 2nd not paid or >60d, blocked
+  disbursed                   // Already funded by FIDC
+}
+
+// NEW: Tokenization status for fallback card
+enum TokenizationStatus {
+  pending
+  success
+  failed
+  expired
+}
+
+// NEW: Fallback card charge attempt status
+enum CardChargeStatus {
+  pending
+  processing
+  success
+  failed
+  cancelled
+}
+
+// NEW: PL Card issuance status from BIZ
+enum PlCardIssuanceStatus {
+  pending
+  issued
+  failed
+  cancelled
+  blocked
+}
+
+// ============================================================================
+// A. IDENTITY & ACCESS
+// ============================================================================
+
+model Merchant {
+  id            String   @id @default(cuid())
+  name          String
+  document      String   @unique // CNPJ
+  email         String
+  phone         String?
+  address       String?
+  city          String?
+  state         String?
+  zipCode       String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  users               MerchantUser[]
+  escrowAccounts      EscrowAccount[]
+  serviceContracts    ServiceContract[]
+  gatewayTransactions GatewayTransaction[]
+
+  @@map("merchants")
+}
+
+model MerchantUser {
+  id          String   @id @default(cuid())
+  merchantId  String
+  email       String   @unique
+  name        String
+  role        String   @default("admin") // admin, viewer, operator
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  merchant    Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@map("merchant_users")
+}
+
+// ============================================================================
+// B. FUNDS & ESCROW ACCOUNTS
+// ============================================================================
+
+model Fund {
+  id                String   @id @default(cuid())
+  name              String
+  document          String   @unique // CNPJ do FIDC
+  adminName         String?  // Administrador (ex: Omni)
+  managerName       String?  // Gestor (ex: A55 Capital)
+  bankCode          String?
+  bankAgency        String?
+  bankAccount       String?
+  bankAccountDigit  String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  escrowAccounts      EscrowAccount[]
+  disbursements       FundDisbursement[]
+  repayments          FundRepayment[]
+  quotaContributions  FundQuotaContribution[]
+
+  @@map("funds")
+}
+
+model EscrowAccount {
+  id              String   @id @default(cuid())
+  merchantId      String
+  fundId          String
+  balanceCents    BigInt   @default(0)
+  currency        String   @default("BRL")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  merchant        Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  fund            Fund     @relation(fields: [fundId], references: [id], onDelete: Cascade)
+  ledgerEntries   EscrowLedgerEntry[]
+  drawdowns       EscrowDrawdown[]
+
+  @@unique([merchantId, fundId])
+  @@index([merchantId])
+  @@index([fundId])
+  @@map("escrow_accounts")
+}
+
+model EscrowLedgerEntry {
+  id                String          @id @default(cuid())
+  escrowAccountId   String
+  entryType         LedgerEntryType
+  amountCents       BigInt
+  currency          String          @default("BRL")
+  balanceAfterCents BigInt
+  description       String?
+  referenceType     String?         // disbursement_split, drawdown, manual
+  referenceId       String?
+  createdAt         DateTime        @default(now())
+
+  escrowAccount     EscrowAccount @relation(fields: [escrowAccountId], references: [id], onDelete: Cascade)
+
+  @@index([escrowAccountId])
+  @@index([createdAt])
+  @@map("escrow_ledger_entries")
+}
+
+// ============================================================================
+// C. END CUSTOMERS, CONTRACTS & CARDS
+// ============================================================================
+
+model EndCustomer {
+  id          String   @id @default(cuid())
+  name        String
+  document    String   @unique // CPF
+  email       String?
+  phone       String?
+  birthDate   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  plCards         PrivateLabelCard[]
+  tokenizedCards  TokenizedCard[]
+  contracts       ServiceContract[]
+
+  @@map("end_customers")
+}
+
+// NEW: Tokenized fallback card (customer's own card captured at 1st payment)
+model TokenizedCard {
+  id                  String             @id @default(cuid())
+  endCustomerId       String
+  cardToken           String             @unique
+  lastFourDigits      String
+  brand               String             // visa, mastercard, etc.
+  expirationMonth     Int
+  expirationYear      Int
+  tokenizationStatus  TokenizationStatus @default(pending)
+  tokenizedAt         DateTime?
+  failureReason       String?
+  isActive            Boolean            @default(true)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  endCustomer         EndCustomer @relation(fields: [endCustomerId], references: [id], onDelete: Cascade)
+  contracts           ServiceContract[]
+  chargeAttempts      TokenizedCardCharge[]
+
+  @@index([endCustomerId])
+  @@index([tokenizationStatus])
+  @@map("tokenized_cards")
+}
+
+// Private Label card issued by BIZ
+model PrivateLabelCard {
+  id                String              @id @default(cuid())
+  endCustomerId     String
+  contractId        String?             @unique // Link to service contract
+  bizCardId         String?             @unique // BIZ external card ID
+  cardToken         String              @unique
+  lastFourDigits    String
+  brand             String              @default("private_label")
+  expirationMonth   Int
+  expirationYear    Int
+  creditLimitCents  BigInt?             // Credit limit = contract remaining value
+  issuanceStatus    PlCardIssuanceStatus @default(pending)
+  issuedAt          DateTime?
+  failureReason     String?
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  endCustomer       EndCustomer @relation(fields: [endCustomerId], references: [id], onDelete: Cascade)
+  contract          ServiceContract? @relation(fields: [contractId], references: [id])
+
+  @@index([endCustomerId])
+  @@index([issuanceStatus])
+  @@map("private_label_cards")
+}
+
+model ServiceContract {
+  id                      String                    @id @default(cuid())
+  merchantId              String
+  endCustomerId           String
+  contractNumber          String                    @unique
+  description             String?
+  totalAmountCents        BigInt
+  currency                String                    @default("BRL")
+  numberOfInstallments    Int
+  startDate               DateTime
+  endDate                 DateTime?
+  
+  // Eligibility tracking for FIDC funding
+  eligibilityStatus       ContractEligibilityStatus @default(pending_first_installment)
+  firstInstallmentPaidAt  DateTime?                 // 1st via acquirer
+  secondInstallmentPaidAt DateTime?                 // 1st PL invoice (triggers eligibility)
+  tokenizedCardId         String?                   // Fallback card for collection
+  
+  // Legacy field (kept for backwards compatibility)
+  isEligibleForFunding    Boolean                   @default(true)
+  
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+
+  merchant            Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  endCustomer         EndCustomer @relation(fields: [endCustomerId], references: [id], onDelete: Cascade)
+  tokenizedCard       TokenizedCard? @relation(fields: [tokenizedCardId], references: [id])
+  plCard              PrivateLabelCard?
+  installments        ContractInstallment[]
+  disbursements       FundDisbursement[]
+  gatewayTransactions GatewayTransaction[]
+
+  @@index([merchantId])
+  @@index([endCustomerId])
+  @@index([contractNumber])
+  @@index([eligibilityStatus])
+  @@map("service_contracts")
+}
+
+model ContractInstallment {
+  id                    String            @id @default(cuid())
+  contractId            String
+  installmentNumber     Int
+  amountCents           BigInt
+  currency              String            @default("BRL")
+  dueDate               DateTime
+  paidAt                DateTime?
+  paidAmountCents       BigInt?
+  daysOverdue           Int               @default(0)
+  status                InstallmentStatus @default(scheduled)
+  origin                InstallmentOrigin @default(private_label)
+  gatewayTransactionId  String?
+  
+  // Sub quota composition flag
+  contributesToSubQuota Boolean           @default(false) // true for 1st + late 2nd
+  
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  contract            ServiceContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  reconciliationItems ReconciliationItem[]
+  repayments          FundRepayment[]
+  quotaContributions  FundQuotaContribution[]
+  chargeAttempts      TokenizedCardCharge[]
+
+  @@unique([contractId, installmentNumber])
+  @@index([contractId])
+  @@index([dueDate])
+  @@index([status])
+  @@index([contributesToSubQuota])
+  @@map("contract_installments")
+}
+
+// ============================================================================
+// D. GATEWAY TRANSACTIONS & RECONCILIATION
+// ============================================================================
+
+model GatewayTransaction {
+  id                    String   @id @default(cuid())
+  merchantId            String
+  contractId            String?
+  gatewayTransactionId  String   @unique // External gateway ID
+  amountCents           BigInt
+  currency              String   @default("BRL")
+  status                String   // authorized, captured, settled, refunded, failed
+  authorizationCode     String?
+  settlementId          String?
+  paymentLink           String?  // Generated payment link
+  processedAt           DateTime
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  merchant              Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  contract              ServiceContract? @relation(fields: [contractId], references: [id])
+  settlement            GatewaySettlement? @relation(fields: [settlementId], references: [id])
+
+  @@index([merchantId])
+  @@index([contractId])
+  @@index([gatewayTransactionId])
+  @@index([processedAt])
+  @@map("gateway_transactions")
+}
+
+model GatewaySettlement {
+  id                String   @id @default(cuid())
+  settlementDate    DateTime
+  totalAmountCents  BigInt
+  currency          String   @default("BRL")
+  transactionCount  Int
+  status            String   @default("pending") // pending, processed, failed
+  processedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  transactions      GatewayTransaction[]
+
+  @@index([settlementDate])
+  @@map("gateway_settlements")
+}
+
+model ReconciliationFile {
+  id              String               @id @default(cuid())
+  fileName        String
+  fileHash        String?
+  source          String               @default("biz") // biz, gateway, manual
+  periodStart     DateTime
+  periodEnd       DateTime
+  totalRecords    Int
+  matchedCount    Int                  @default(0)
+  mismatchedCount Int                  @default(0)
+  status          ReconciliationStatus @default(pending)
+  processedAt     DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  items           ReconciliationItem[]
+
+  @@index([periodStart, periodEnd])
+  @@index([source])
+  @@map("reconciliation_files")
+}
+
+model ReconciliationItem {
+  id                    String               @id @default(cuid())
+  fileId                String
+  installmentId         String?
+  externalReference     String               // Biz file reference
+  expectedAmountCents   BigInt
+  actualAmountCents     BigInt?
+  currency              String               @default("BRL")
+  status                ReconciliationStatus @default(pending)
+  mismatchReason        String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  file                  ReconciliationFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  installment           ContractInstallment? @relation(fields: [installmentId], references: [id])
+
+  @@index([fileId])
+  @@index([installmentId])
+  @@index([status])
+  @@map("reconciliation_items")
+}
+
+// ============================================================================
+// E. FUND DISBURSEMENTS, SPLITS, REPAYMENTS, ESCROW & QUOTA
+// ============================================================================
+
+model FundDisbursement {
+  id                    String             @id @default(cuid())
+  fundId                String
+  contractId            String
+  totalAmountCents      BigInt             // Total disbursed
+  merchantAmountCents   BigInt             // 70% to merchant
+  escrowAmountCents     BigInt             // 30% to escrow
+  currency              String             @default("BRL")
+  status                DisbursementStatus @default(pending)
+  disbursedAt           DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  fund                  Fund @relation(fields: [fundId], references: [id], onDelete: Cascade)
+  contract              ServiceContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  splits                DisbursementSplit[]
+
+  @@unique([fundId, contractId])
+  @@index([fundId])
+  @@index([contractId])
+  @@index([status])
+  @@map("fund_disbursements")
+}
+
+model DisbursementSplit {
+  id              String   @id @default(cuid())
+  disbursementId  String
+  recipientType   String   // merchant, escrow
+  amountCents     BigInt
+  currency        String   @default("BRL")
+  percentage      Decimal  @db.Decimal(5, 2) // 70.00 or 30.00
+  createdAt       DateTime @default(now())
+
+  disbursement    FundDisbursement @relation(fields: [disbursementId], references: [id], onDelete: Cascade)
+
+  @@index([disbursementId])
+  @@map("disbursement_splits")
+}
+
+model FundRepayment {
+  id              String   @id @default(cuid())
+  fundId          String
+  installmentId   String
+  amountCents     BigInt
+  currency        String   @default("BRL")
+  repaidAt        DateTime
+  source          String   @default("installment_payment") // installment_payment, escrow_drawdown
+  createdAt       DateTime @default(now())
+
+  fund            Fund @relation(fields: [fundId], references: [id], onDelete: Cascade)
+  installment     ContractInstallment @relation(fields: [installmentId], references: [id], onDelete: Cascade)
+
+  @@index([fundId])
+  @@index([installmentId])
+  @@index([repaidAt])
+  @@map("fund_repayments")
+}
+
+model EscrowDrawdown {
+  id              String         @id @default(cuid())
+  escrowAccountId String
+  amountCents     BigInt
+  currency        String         @default("BRL")
+  reason          DrawdownReason
+  referenceType   String?        // installment, contract
+  referenceId     String?
+  description     String?
+  executedAt      DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+
+  escrowAccount   EscrowAccount @relation(fields: [escrowAccountId], references: [id], onDelete: Cascade)
+
+  @@index([escrowAccountId])
+  @@index([executedAt])
+  @@map("escrow_drawdowns")
+}
+
+// NEW: Track contributions to Fund Sub quota (1st installment + late 2nd)
+model FundQuotaContribution {
+  id              String   @id @default(cuid())
+  fundId          String
+  installmentId   String
+  amountCents     BigInt
+  currency        String   @default("BRL")
+  quotaType       String   @default("sub") // sub, senior
+  reason          String   // first_installment, late_second_installment
+  contributedAt   DateTime
+  createdAt       DateTime @default(now())
+
+  fund            Fund @relation(fields: [fundId], references: [id], onDelete: Cascade)
+  installment     ContractInstallment @relation(fields: [installmentId], references: [id], onDelete: Cascade)
+
+  @@index([fundId])
+  @@index([installmentId])
+  @@index([quotaType])
+  @@map("fund_quota_contributions")
+}
+
+// NEW: Fallback charge attempts on tokenized card when PL invoice unpaid
+model TokenizedCardCharge {
+  id                String           @id @default(cuid())
+  tokenizedCardId   String
+  installmentId     String
+  amountCents       BigInt
+  currency          String           @default("BRL")
+  status            CardChargeStatus @default(pending)
+  attemptNumber     Int              @default(1)
+  gatewayReference  String?
+  failureReason     String?
+  attemptedAt       DateTime         @default(now())
+  processedAt       DateTime?
+  createdAt         DateTime         @default(now())
+
+  tokenizedCard     TokenizedCard @relation(fields: [tokenizedCardId], references: [id], onDelete: Cascade)
+  installment       ContractInstallment @relation(fields: [installmentId], references: [id], onDelete: Cascade)
+
+  @@index([tokenizedCardId])
+  @@index([installmentId])
+  @@index([status])
+  @@map("tokenized_card_charges")
+}
+
+// ============================================================================
+// F. AUDIT & OBSERVABILITY
+// ============================================================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // create, update, delete, disbursement, drawdown, charge_attempt, etc.
+  actorType   String   // system, user, webhook, biz, gateway
+  actorId     String?
+  entityType  String   // merchant, contract, installment, etc.
+  entityId    String
+  payload     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model DomainEvent {
+  id          String   @id @default(cuid())
+  eventType   String   // See event types below
+  source      String   // a55, biz, gateway, fidc
+  target      String?  // fidc, merchant, biz, a55
+  payload     Json
+  status      String   @default("pending") // pending, delivered, failed
+  deliveredAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([eventType])
+  @@index([source])
+  @@index([status])
+  @@index([createdAt])
+  @@map("domain_events")
+}
+
+// Event types reference:
+// - gateway.transaction.authorized
+// - gateway.transaction.captured
+// - gateway.card.tokenized
+// - gateway.card.tokenization_failed
+// - biz.pl_card.issued
+// - biz.pl_card.issuance_failed
+// - biz.installment.paid
+// - biz.installment.late
+// - biz.installment.defaulted
+// - biz.disbursement.eligible
+// - a55.disbursement.requested
+// - a55.disbursement.posted
+// - a55.escrow.drawdown
+// - a55.fallback_charge.attempted
+// - a55.fallback_charge.success
+// - a55.fallback_charge.failed
+// - fidc.payment.received
+// - fidc.quota.contribution
