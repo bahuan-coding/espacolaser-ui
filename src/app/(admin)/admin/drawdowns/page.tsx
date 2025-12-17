@@ -67,7 +67,7 @@ async function getDrawdownsData(page: number, reason?: string) {
   return {
     drawdowns: drawdowns.map((d) => ({
       id: d.id,
-      amountCents: d.amountCents,
+      amountCents: Number(d.amountCents),
       reason: d.reason,
       description: d.description,
       referenceType: d.referenceType,

@@ -61,7 +61,7 @@ async function getParcelasData(params: Awaited<PageProps["searchParams"]>) {
     installments: installments.map((i) => ({
       id: i.id,
       installmentNumber: i.installmentNumber,
-      amountCents: i.amountCents,
+      amountCents: Number(i.amountCents),
       dueDate: i.dueDate,
       paidAt: i.paidAt,
       daysOverdue: i.daysOverdue,

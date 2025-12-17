@@ -68,7 +68,7 @@ async function getPagamentosData(params: {
   return {
     payments: payments.map((p) => ({
       id: p.id,
-      paidAmountCents: p.paidAmountCents,
+      paidAmountCents: Number(p.paidAmountCents),
       paymentDate: p.paymentDate,
       paymentMethod: p.paymentMethod,
       customerName: p.customerName,
