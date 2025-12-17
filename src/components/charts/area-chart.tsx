@@ -4,7 +4,6 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 interface AreaChartData {
   name: string;
-  value: number;
   [key: string]: string | number;
 }
 
